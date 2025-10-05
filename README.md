@@ -1,4 +1,4 @@
-# Nibiz CRM System
+# Modern CRM System
 
 A comprehensive Customer Relationship Management (CRM) system built with Laravel 12, Vue.js 3, and Inertia.js. This application provides lead management, call tracking, user management, and role-based permissions for efficient business operations.
 
@@ -37,8 +37,8 @@ Before you begin, ensure you have the following installed:
 ### 1. Clone the Repository
 
 ```bash
-git clone https://github.com/your-username/nibiz-crm.git
-cd nibiz-crm
+git clone https://github.com/rsmmonaem/CRM.git
+cd CRM
 ```
 
 ### 2. Install PHP Dependencies
@@ -78,7 +78,7 @@ touch database/database.sqlite
 DB_CONNECTION=mysql
 DB_HOST=127.0.0.1
 DB_PORT=3306
-DB_DATABASE=nibiz_crm
+DB_DATABASE=crm
 DB_USERNAME=your_username
 DB_PASSWORD=your_password
 ```
@@ -288,7 +288,7 @@ routes/
 Key environment variables in `.env`:
 
 ```env
-APP_NAME="Nibiz CRM"
+APP_NAME="CRM"
 APP_ENV=local
 APP_KEY=base64:your-app-key
 APP_DEBUG=true
