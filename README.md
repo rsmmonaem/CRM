@@ -1,61 +1,366 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# Nibiz CRM System
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+A comprehensive Customer Relationship Management (CRM) system built with Laravel 12, Vue.js 3, and Inertia.js. This application provides lead management, call tracking, user management, and role-based permissions for efficient business operations.
 
-## About Laravel
+## 🚀 Features
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+### Core Functionality
+- **Lead Management**: Create, edit, and track customer leads with detailed information
+- **Call Tracking**: Log and manage follow-up calls with scheduling capabilities
+- **Service Management**: Organize and categorize business services
+- **Status Tracking**: Monitor lead progression through customizable statuses
+- **User Management**: Comprehensive user administration with role-based access
+- **Permission System**: Granular permissions for different modules and actions
+- **Dashboard Analytics**: Overview of leads, calls, and user performance
+- **Search Functionality**: Quick search across leads and other entities
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+### Technical Features
+- **Modern Stack**: Laravel 12 + Vue.js 3 + Inertia.js + Tailwind CSS
+- **Real-time Updates**: Server-side rendering with Vue.js components
+- **Responsive Design**: Mobile-friendly interface with Tailwind CSS
+- **API Endpoints**: RESTful API for lead details and call history
+- **Database Support**: SQLite (default) and MySQL compatibility
+- **Authentication**: Laravel Breeze with Sanctum for API authentication
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+## 📋 Prerequisites
 
-## Learning Laravel
+Before you begin, ensure you have the following installed:
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
+- **PHP**: 8.2 or higher
+- **Composer**: Latest version
+- **Node.js**: 18.x or higher
+- **NPM**: Latest version
+- **Database**: SQLite (default) or MySQL 8.0+
 
-You may also try the [Laravel Bootcamp](https://bootcamp.laravel.com), where you will be guided through building a modern Laravel application from scratch.
+## 🛠️ Installation
 
-If you don't feel like reading, [Laracasts](https://laracasts.com) can help. Laracasts contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+### 1. Clone the Repository
 
-## Laravel Sponsors
+```bash
+git clone https://github.com/your-username/nibiz-crm.git
+cd nibiz-crm
+```
 
-We would like to extend our thanks to the following sponsors for funding Laravel development. If you are interested in becoming a sponsor, please visit the [Laravel Partners program](https://partners.laravel.com).
+### 2. Install PHP Dependencies
 
-### Premium Partners
+```bash
+composer install
+```
 
-- **[Vehikl](https://vehikl.com)**
-- **[Tighten Co.](https://tighten.co)**
-- **[Kirschbaum Development Group](https://kirschbaumdevelopment.com)**
-- **[64 Robots](https://64robots.com)**
-- **[Curotec](https://www.curotec.com/services/technologies/laravel)**
-- **[DevSquad](https://devsquad.com/hire-laravel-developers)**
-- **[Redberry](https://redberry.international/laravel-development)**
-- **[Active Logic](https://activelogic.com)**
+### 3. Install Node.js Dependencies
 
-## Contributing
+```bash
+npm install
+```
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+### 4. Environment Configuration
 
-## Code of Conduct
+```bash
+# Copy the environment file
+cp .env.example .env
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+# Generate application key
+php artisan key:generate
+```
 
-## Security Vulnerabilities
+### 5. Database Setup
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+#### Option A: SQLite (Default)
+```bash
+# Create SQLite database file
+touch database/database.sqlite
+```
 
-## License
+#### Option B: MySQL
+1. Create a MySQL database
+2. Update `.env` file with your database credentials:
+```env
+DB_CONNECTION=mysql
+DB_HOST=127.0.0.1
+DB_PORT=3306
+DB_DATABASE=nibiz_crm
+DB_USERNAME=your_username
+DB_PASSWORD=your_password
+```
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+### 6. Run Database Migrations
+
+```bash
+php artisan migrate
+```
+
+### 7. Seed Initial Data
+
+```bash
+php artisan db:seed
+```
+
+### 8. Build Frontend Assets
+
+```bash
+# For development
+npm run dev
+
+# For production
+npm run build
+```
+
+### 9. Start the Application
+
+```bash
+# Start Laravel development server
+php artisan serve
+
+# In another terminal, start Vite for frontend assets
+npm run dev
+```
+
+The application will be available at `http://localhost:8000`
+
+## 🔧 Development Setup
+
+### Using Composer Scripts
+
+The project includes convenient development scripts:
+
+```bash
+# Start all development services (server, queue, logs, vite)
+composer run dev
+
+# Run tests
+composer run test
+```
+
+This will start:
+- Laravel development server
+- Queue worker
+- Log monitoring (Pail)
+- Vite development server
+
+### Database Migrations
+
+The application includes the following key migrations:
+
+- `create_users_table` - User authentication and management
+- `create_services_table` - Business services catalog
+- `create_statuses_table` - Lead status definitions
+- `create_leads_table` - Main lead management
+- `create_lead_details_table` - Call tracking and follow-ups
+- `create_permissions_table` - Permission system
+- `create_user_permissions_table` - User permission assignments
+
+## 📊 Database Schema
+
+### Core Models
+
+#### Leads
+- **name**: Lead contact name
+- **company_name**: Company information
+- **location**: Geographic location
+- **phone**: Contact phone number
+- **email**: Contact email address
+- **service_id**: Associated service
+- **status_id**: Current lead status
+- **assigned_user_id**: Assigned team member
+- **created_by**: Lead creator
+
+#### Lead Details
+- **lead_id**: Associated lead
+- **call_followup_date**: Scheduled call date
+- **call_followup_summary**: Call notes and summary
+- **next_call_date**: Next scheduled follow-up
+- **created_by**: Call log creator
+
+#### Users
+- **name**: User full name
+- **email**: User email (login)
+- **password**: Encrypted password
+- **role**: User role (admin/user)
+
+#### Permissions
+- **module**: Permission module (leads, services, users, etc.)
+- **action**: Permission action (view, create, edit, delete)
+
+## 🔐 User Roles & Permissions
+
+### Admin Role
+- Full access to all modules and actions
+- User management capabilities
+- System configuration access
+
+### User Role
+- Access based on assigned permissions
+- Module-specific permissions (leads, services, statuses, users)
+- Action-specific permissions (view, create, edit, delete)
+
+### Permission System
+The application uses a granular permission system where:
+- Permissions are organized by modules (leads, services, statuses, users)
+- Each module has specific actions (view, create, edit, delete)
+- Users can be assigned specific permission combinations
+- Admins automatically have all permissions
+
+## 🚀 Usage
+
+### 1. First Login
+1. Navigate to `http://localhost:8000`
+2. Register a new account or use seeded admin credentials
+3. Complete your profile setup
+
+### 2. Lead Management
+1. **Create Leads**: Add new customer leads with contact information
+2. **Assign Leads**: Assign leads to team members
+3. **Update Status**: Track lead progression through sales pipeline
+4. **Add Services**: Associate leads with relevant business services
+
+### 3. Call Tracking
+1. **Schedule Calls**: Set follow-up dates for leads
+2. **Log Calls**: Record call summaries and outcomes
+3. **Track History**: View complete call history for each lead
+4. **Manage Follow-ups**: Schedule and track next call dates
+
+### 4. User Management
+1. **Create Users**: Add new team members
+2. **Assign Permissions**: Configure user access levels
+3. **Manage Roles**: Set user roles and capabilities
+
+### 5. Dashboard
+- View lead statistics and performance metrics
+- Monitor pending calls and follow-ups
+- Track user activity and assignments
+
+## 🔌 API Endpoints
+
+### Public API
+- `GET /api/leads/{lead}/call-history-public` - Get lead call history (public)
+
+### Authenticated API
+- `GET /api/search` - Search across entities
+- `GET /api/quick-search` - Quick search functionality
+- `GET /api/leads/{lead}/details` - Get detailed lead information
+- `GET /api/leads/{lead}/call-history` - Get authenticated lead call history
+
+## 🧪 Testing
+
+```bash
+# Run all tests
+php artisan test
+
+# Run specific test suite
+php artisan test --testsuite=Feature
+php artisan test --testsuite=Unit
+```
+
+## 📁 Project Structure
+
+```
+app/
+├── Http/
+│   ├── Controllers/     # API and web controllers
+│   ├── Middleware/      # Custom middleware
+│   └── Requests/        # Form request validation
+├── Models/              # Eloquent models
+└── Providers/           # Service providers
+
+resources/
+├── js/
+│   ├── Components/      # Vue.js components
+│   ├── Layouts/         # Application layouts
+│   ├── Pages/           # Inertia.js pages
+│   └── composables/     # Vue composables
+└── css/                 # Stylesheets
+
+database/
+├── migrations/          # Database migrations
+├── seeders/            # Database seeders
+└── factories/          # Model factories
+
+routes/
+├── web.php             # Web routes
+├── auth.php            # Authentication routes
+└── console.php         # Artisan commands
+```
+
+## 🔧 Configuration
+
+### Environment Variables
+
+Key environment variables in `.env`:
+
+```env
+APP_NAME="Nibiz CRM"
+APP_ENV=local
+APP_KEY=base64:your-app-key
+APP_DEBUG=true
+APP_URL=http://localhost:8000
+
+DB_CONNECTION=sqlite
+DB_DATABASE=/absolute/path/to/database.sqlite
+
+MAIL_MAILER=smtp
+MAIL_HOST=mailpit
+MAIL_PORT=1025
+MAIL_USERNAME=null
+MAIL_PASSWORD=null
+MAIL_ENCRYPTION=null
+```
+
+## 🚀 Deployment
+
+### Production Build
+
+```bash
+# Install production dependencies
+composer install --optimize-autoloader --no-dev
+
+# Build frontend assets
+npm run build
+
+# Run migrations
+php artisan migrate --force
+
+# Cache configuration
+php artisan config:cache
+php artisan route:cache
+php artisan view:cache
+```
+
+### Server Requirements
+
+- PHP 8.2+
+- Web server (Apache/Nginx)
+- Database (MySQL/PostgreSQL recommended for production)
+- SSL certificate (recommended)
+
+## 🤝 Contributing
+
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add some amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
+
+## 📝 License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## 🆘 Support
+
+For support and questions:
+- Create an issue in the GitHub repository
+- Contact the development team
+- Check the documentation wiki
+
+## 🔄 Changelog
+
+### Version 1.0.0
+- Initial release
+- Lead management system
+- Call tracking functionality
+- User management with permissions
+- Dashboard analytics
+- API endpoints for integration
+
+---
+
+**Built with ❤️ using Laravel, Vue.js, and Inertia.js**
