@@ -1,0 +1,18 @@
+<svg width="16" height="16" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg">
+  <circle cx="8" cy="8" r="8" fill="#F4B800"/>
+
+  <!-- Shadow for the N -->
+  <text x="8" y="11" font-family="Arial, sans-serif" font-size="10" font-weight="900" text-anchor="middle">
+    <tspan fill="#333333" opacity="0.6" x="9" y="12">N</tspan>
+  </text>
+
+  <!-- White outline for the N -->
+  <text x="8" y="11" font-family="Arial, sans-serif" font-size="10" font-weight="900" text-anchor="middle">
+    <tspan fill="white" stroke="white" stroke-width="0.6" x="8" y="11">N</tspan>
+  </text>
+
+  <!-- Blue N -->
+  <text x="8" y="11" font-family="Arial, sans-serif" font-size="10" font-weight="900" text-anchor="middle">
+    <tspan fill="#0066CC" x="8" y="11">N</tspan>
+  </text>
+</svg>
