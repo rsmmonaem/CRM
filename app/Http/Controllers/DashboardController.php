@@ -21,34 +21,34 @@ class DashboardController extends Controller
         // CRM Flow Summary Implementation
         // 1. Today's Call: next_call_date = today and called_at IS NULL
         $todaysCallsQuery = LeadDetail::with(['lead.service', 'lead.status', 'lead.assignedUser'])
-        //lest next call date
+            //lest next call date
             ->whereDate('next_call_date', $today)
-            ->whereNull('called_at')
-            ->orderBy('next_call_date', 'asc');
+            // ->whereNull('called_at')
+            ->orderBy('next_call_date', 'DESC');
 
         // 2. Pending Call: next_call_date < today and called_at IS NULL
         $pendingCallsQuery = LeadDetail::with(['lead.service', 'lead.status', 'lead.assignedUser'])
             ->whereDate('next_call_date', '<', $today)
-            ->whereNull('called_at')
+            // ->whereNull('called_at')
             ->orderBy('next_call_date', 'asc');
 
         // 3. Upcoming Call: next_call_date > today and called_at IS NULL
         $upcomingCallsQuery = LeadDetail::with(['lead.service', 'lead.status', 'lead.assignedUser'])
             ->whereDate('next_call_date', '>', $today)
-            ->whereNull('called_at')
+            // ->whereNull('called_at')
             ->orderBy('next_call_date', 'asc');
 
         // Filter by user role
         if (!$user->isAdmin()) {
-            $todaysCallsQuery->whereHas('lead', function($query) use ($user) {
+            $todaysCallsQuery->whereHas('lead', function ($query) use ($user) {
                 $query->where('assigned_user_id', $user->id);
             });
 
-            $pendingCallsQuery->whereHas('lead', function($query) use ($user) {
+            $pendingCallsQuery->whereHas('lead', function ($query) use ($user) {
                 $query->where('assigned_user_id', $user->id);
             });
 
-            $upcomingCallsQuery->whereHas('lead', function($query) use ($user) {
+            $upcomingCallsQuery->whereHas('lead', function ($query) use ($user) {
                 $query->where('assigned_user_id', $user->id);
             });
         }
@@ -59,7 +59,7 @@ class DashboardController extends Controller
 
 
         // Get leads for the user
-        $leadsQuery = Lead::with(['service', 'status', 'assignedUser', 'leadDetails' => function($query) {
+        $leadsQuery = Lead::with(['service', 'status', 'assignedUser', 'leadDetails' => function ($query) {
             $query->orderBy('created_at', 'desc');
         }]);
 
@@ -70,12 +70,12 @@ class DashboardController extends Controller
         $leads = $leadsQuery->orderBy('created_at', 'desc')->get();
 
         // Ensure lead details are properly loaded and appended
-        $leads->load(['leadDetails' => function($query) {
+        $leads->load(['leadDetails' => function ($query) {
             $query->orderBy('created_at', 'desc');
         }]);
 
         // Explicitly append leadDetails to each lead for frontend
-        $leads->each(function($lead) {
+        $leads->each(function ($lead) {
             $lead->makeVisible(['lead_details']);
             $lead->setRelation('lead_details', $lead->leadDetails);
         });
@@ -135,7 +135,7 @@ class DashboardController extends Controller
         $todaysCalls = LeadDetail::with(['lead.service', 'lead.status', 'lead.assignedUser'])
             ->whereDate('next_call_date', $today)
             ->whereNull('called_at')
-            ->whereHas('lead', function($query) use ($userId) {
+            ->whereHas('lead', function ($query) use ($userId) {
                 $query->where('assigned_user_id', $userId);
             })
             ->orderBy('next_call_date', 'asc')
@@ -145,7 +145,7 @@ class DashboardController extends Controller
         $pendingCalls = LeadDetail::with(['lead.service', 'lead.status', 'lead.assignedUser'])
             ->whereDate('next_call_date', '<', $today)
             ->whereNull('called_at')
-            ->whereHas('lead', function($query) use ($userId) {
+            ->whereHas('lead', function ($query) use ($userId) {
                 $query->where('assigned_user_id', $userId);
             })
             ->orderBy('next_call_date', 'asc')
@@ -155,14 +155,14 @@ class DashboardController extends Controller
         $upcomingCalls = LeadDetail::with(['lead.service', 'lead.status', 'lead.assignedUser'])
             ->whereDate('next_call_date', '>', $today)
             ->whereNull('called_at')
-            ->whereHas('lead', function($query) use ($userId) {
+            ->whereHas('lead', function ($query) use ($userId) {
                 $query->where('assigned_user_id', $userId);
             })
             ->orderBy('next_call_date', 'asc')
             ->get();
 
         // Get leads for selected user
-        $leads = Lead::with(['service', 'status', 'assignedUser', 'leadDetails' => function($query) {
+        $leads = Lead::with(['service', 'status', 'assignedUser', 'leadDetails' => function ($query) {
             $query->orderBy('created_at', 'desc');
         }])
             ->where('assigned_user_id', $userId)
@@ -170,12 +170,12 @@ class DashboardController extends Controller
             ->get();
 
         // Ensure lead details are properly loaded and appended
-        $leads->load(['leadDetails' => function($query) {
+        $leads->load(['leadDetails' => function ($query) {
             $query->orderBy('created_at', 'desc');
         }]);
 
         // Explicitly append leadDetails to each lead for frontend
-        $leads->each(function($lead) {
+        $leads->each(function ($lead) {
             $lead->makeVisible(['lead_details']);
             $lead->setRelation('lead_details', $lead->leadDetails);
         });

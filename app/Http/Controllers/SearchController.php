@@ -13,7 +13,7 @@ class SearchController extends Controller
     public function search(Request $request)
     {
         $query = $request->get('q', '');
-        
+
         if (empty($query)) {
             return response()->json(['results' => []]);
         }
@@ -66,7 +66,6 @@ class SearchController extends Controller
 
         // Search Services
         $services = Service::where('name', 'like', "%{$query}%")
-            ->orWhere('description', 'like', "%{$query}%")
             ->limit(5)
             ->get();
 
@@ -74,7 +73,7 @@ class SearchController extends Controller
             $results->push([
                 'id' => $service->id,
                 'title' => $service->name,
-                'description' => $service->description ?: 'Service',
+                'description' => 'Service',
                 'category' => 'services',
                 'url' => route('services.show', $service->id),
                 'subtitle' => 'Service',
@@ -84,7 +83,6 @@ class SearchController extends Controller
 
         // Search Statuses
         $statuses = Status::where('name', 'like', "%{$query}%")
-            ->orWhere('description', 'like', "%{$query}%")
             ->limit(5)
             ->get();
 
@@ -92,7 +90,7 @@ class SearchController extends Controller
             $results->push([
                 'id' => $status->id,
                 'title' => $status->name,
-                'description' => $status->description ?: 'Status',
+                'description' => 'Status',
                 'category' => 'statuses',
                 'url' => route('statuses.show', $status->id),
                 'subtitle' => 'Status',
@@ -117,7 +115,7 @@ class SearchController extends Controller
     public function quickSearch(Request $request)
     {
         $query = $request->get('q', '');
-        
+
         if (empty($query)) {
             return response()->json(['results' => []]);
         }
