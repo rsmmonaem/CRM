@@ -18,7 +18,7 @@ class CallTrackingController extends Controller
     {
         $user = auth()->user();
 
-        $query = CallTracking::with(['lead', 'user'])
+        $query = CallTracking::with(['lead', 'user', 'leadDetail'])
             ->orderBy('created_at', 'desc');
 
         // Filter by user if not admin
@@ -80,7 +80,7 @@ class CallTrackingController extends Controller
 
         return response()->json([
             'message' => 'Call tracking initiated',
-            'call_tracking' => $callTracking->load(['lead', 'user']),
+            'call_tracking' => $callTracking->load(['lead', 'user', 'leadDetail']),
             'call_id' => $callTracking->call_id
         ], 201);
     }
@@ -90,7 +90,7 @@ class CallTrackingController extends Controller
      */
     public function show($id)
     {
-        $callTracking = CallTracking::with(['lead', 'user'])->findOrFail($id);
+        $callTracking = CallTracking::with(['lead', 'user', 'leadDetail'])->findOrFail($id);
 
         $user = auth()->user();
 
@@ -119,6 +119,7 @@ class CallTrackingController extends Controller
         $validator = Validator::make($request->all(), [
             'call_status' => 'in:initiated,ringing,answered,completed,cancelled,failed,busy,no_answer',
             'call_summary' => 'nullable|string',
+            'next_call_date' => 'nullable|date|after:today',
             'audio_recording' => 'nullable|file|mimes:mp3,wav,m4a|max:10240', // 10MB max
             'call_metadata' => 'nullable|array'
         ]);
@@ -141,7 +142,7 @@ class CallTrackingController extends Controller
                     $callTracking->markAsAnswered();
                     break;
                 case 'completed':
-                    $callTracking->markAsCompleted($request->call_summary);
+                    $callTracking->markAsCompleted($request->call_summary, $request->next_call_date);
                     break;
                 case 'cancelled':
                 case 'failed':
@@ -182,7 +183,7 @@ class CallTrackingController extends Controller
 
         return response()->json([
             'message' => 'Call tracking updated',
-            'call_tracking' => $callTracking->fresh(['lead', 'user'])
+            'call_tracking' => $callTracking->fresh(['lead', 'user', 'leadDetail'])
         ]);
     }
 
@@ -191,7 +192,7 @@ class CallTrackingController extends Controller
      */
     public function getByCallId($callId)
     {
-        $callTracking = CallTracking::with(['lead', 'user'])
+        $callTracking = CallTracking::with(['lead', 'user', 'leadDetail'])
             ->where('call_id', $callId)
             ->firstOrFail();
 
@@ -213,7 +214,7 @@ class CallTrackingController extends Controller
         $user = auth()->user();
 
         $query = CallTracking::active()
-            ->with(['lead', 'user'])
+            ->with(['lead', 'user', 'leadDetail'])
             ->orderBy('call_started_at', 'desc');
 
         if (!$user->isAdmin()) {
@@ -260,6 +261,33 @@ class CallTrackingController extends Controller
         ];
 
         return response()->json($stats);
+    }
+
+    /**
+     * Get call tracking history for a specific lead
+     */
+    public function getLeadCallHistory($leadId)
+    {
+        $user = auth()->user();
+        $lead = Lead::findOrFail($leadId);
+
+        // Check if user can access this lead
+        if (!$user->isAdmin() && $lead->assigned_user_id !== $user->id) {
+            return response()->json(['error' => 'Unauthorized'], 403);
+        }
+
+        $callHistory = CallTracking::with(['user', 'leadDetail'])
+            ->where('lead_id', $leadId)
+            ->orderBy('created_at', 'desc')
+            ->get();
+
+        return response()->json([
+            'lead' => $lead,
+            'call_history' => $callHistory,
+            'total_calls' => $callHistory->count(),
+            'completed_calls' => $callHistory->where('call_status', 'completed')->count(),
+            'total_duration' => $callHistory->where('call_status', 'completed')->sum('call_duration_seconds')
+        ]);
     }
 
     /**

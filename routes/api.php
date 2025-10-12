@@ -54,6 +54,7 @@ Route::prefix('auth')->group(function () {
         Route::get('call-trackings/call/{callId}', [CallTrackingController::class, 'getByCallId']);
         Route::get('call-trackings/active', [CallTrackingController::class, 'getActiveCalls']);
         Route::get('call-trackings/stats', [CallTrackingController::class, 'getStats']);
+        Route::get('call-trackings/lead/{leadId}/history', [CallTrackingController::class, 'getLeadCallHistory']);
 
         // Call Notification API Routes (for web app)
         Route::post('call-notifications/notify', [CallNotificationController::class, 'notifyAndroidCall']);

@@ -184,7 +184,7 @@ const initiateCall = async () => {
     }
 };
 
-const updateCallStatus = async (status, summary = null) => {
+const updateCallStatus = async (status, summary = null, nextCallDate = null) => {
     if (!callTracking.value?.id) return;
 
     try {
@@ -201,7 +201,8 @@ const updateCallStatus = async (status, summary = null) => {
             credentials: 'same-origin',
             body: JSON.stringify({
                 call_status: status,
-                call_summary: summary
+                call_summary: summary,
+                next_call_date: nextCallDate
             })
         });
 
@@ -251,7 +252,7 @@ const answerCall = () => {
 const completeCall = () => {
     const summary = prompt('Enter call summary:');
     if (summary !== null) {
-        updateCallStatus('completed', summary);
+        updateCallStatus('completed', summary, form.next_call_date);
     }
 };
 
