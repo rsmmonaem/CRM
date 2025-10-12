@@ -76,4 +76,20 @@ class Lead extends Model
     {
         return $this->leadDetails()->whereDate('call_followup_date', '<=', today());
     }
+
+    /**
+     * Get call trackings for this lead
+     */
+    public function callTrackings()
+    {
+        return $this->hasMany(CallTracking::class);
+    }
+
+    /**
+     * Get the latest call tracking for this lead
+     */
+    public function latestCallTracking()
+    {
+        return $this->hasOne(CallTracking::class)->latest();
+    }
 }

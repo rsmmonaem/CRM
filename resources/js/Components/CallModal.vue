@@ -1,5 +1,5 @@
 <script setup>
-import { ref, watch } from 'vue';
+import { ref, watch, onUnmounted } from 'vue';
 import { useForm, router } from '@inertiajs/vue3';
 
 const props = defineProps({
@@ -11,6 +11,10 @@ const props = defineProps({
 const emit = defineEmits(['close']);
 
 const leadDetails = ref([]);
+const callTracking = ref(null);
+const isCallActive = ref(false);
+const callDuration = ref(0);
+const callTimer = ref(null);
 
 // Function to fetch lead details via API (fallback)
 const fetchLeadDetailsViaAPI = async (leadId) => {
@@ -120,6 +124,138 @@ const updateStatus = () => {
         }
     });
 };
+
+// Call tracking functions
+const initiateCall = async () => {
+    if (!props.lead?.id || !props.lead?.phone) {
+        alert('No phone number available for this lead');
+        return;
+    }
+
+    try {
+        const response = await fetch('/api/call-trackings', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+            credentials: 'same-origin',
+            body: JSON.stringify({
+                lead_id: props.lead.id,
+                phone_number: props.lead.phone,
+                device_type: 'web',
+                is_auto_dialed: true
+            })
+        });
+
+        if (response.ok) {
+            const data = await response.json();
+            callTracking.value = data.call_tracking;
+            isCallActive.value = true;
+
+            // Start call timer
+            startCallTimer();
+
+            // Auto-dial functionality
+            const phoneNumber = props.lead.phone.replace(/\D/g, ''); // Remove non-digits
+            const telLink = `tel:${phoneNumber}`;
+
+            // Create a temporary link and click it to initiate the call
+            const link = document.createElement('a');
+            link.href = telLink;
+            link.click();
+
+            // Update call status to ringing
+            updateCallStatus('ringing');
+        } else {
+            const error = await response.json();
+            alert('Failed to initiate call tracking: ' + (error.message || 'Unknown error'));
+        }
+    } catch (error) {
+        console.error('Error initiating call:', error);
+        alert('Failed to initiate call tracking');
+    }
+};
+
+const updateCallStatus = async (status, summary = null) => {
+    if (!callTracking.value?.id) return;
+
+    try {
+        const response = await fetch(`/api/call-trackings/${callTracking.value.id}`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+            credentials: 'same-origin',
+            body: JSON.stringify({
+                call_status: status,
+                call_summary: summary
+            })
+        });
+
+        if (response.ok) {
+            const data = await response.json();
+            callTracking.value = data.call_tracking;
+
+            if (status === 'completed' || status === 'cancelled') {
+                endCall();
+            }
+        }
+    } catch (error) {
+        console.error('Error updating call status:', error);
+    }
+};
+
+const startCallTimer = () => {
+    callDuration.value = 0;
+    callTimer.value = setInterval(() => {
+        callDuration.value++;
+    }, 1000);
+};
+
+const endCall = () => {
+    isCallActive.value = false;
+    if (callTimer.value) {
+        clearInterval(callTimer.value);
+        callTimer.value = null;
+    }
+};
+
+const formatDuration = (seconds) => {
+    const hours = Math.floor(seconds / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+    const secs = seconds % 60;
+
+    if (hours > 0) {
+        return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+    }
+    return `${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+};
+
+const answerCall = () => {
+    updateCallStatus('answered');
+};
+
+const completeCall = () => {
+    const summary = prompt('Enter call summary:');
+    if (summary !== null) {
+        updateCallStatus('completed', summary);
+    }
+};
+
+const cancelCall = () => {
+    updateCallStatus('cancelled');
+};
+
+// Cleanup on component unmount
+onUnmounted(() => {
+    if (callTimer.value) {
+        clearInterval(callTimer.value);
+    }
+});
 </script>
 
 <template>
@@ -185,6 +321,76 @@ const updateStatus = () => {
                                 </div>
                                 <div v-if="statusForm.errors.status_id" class="mt-2 text-sm text-red-600 dark:text-red-400">
                                     {{ statusForm.errors.status_id }}
+                                </div>
+                            </div>
+
+                            <!-- Call Tracking Section -->
+                            <div class="bg-gradient-to-r from-green-50 to-blue-50 dark:from-green-900/20 dark:to-blue-900/20 rounded-lg p-4 border border-green-200 dark:border-green-600">
+                                <h4 class="text-sm font-semibold text-gray-900 dark:text-white mb-3 flex items-center">
+                                    <svg class="h-4 w-4 text-green-600 dark:text-green-400 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+                                    </svg>
+                                    Call Tracking
+                                </h4>
+
+                                <!-- Call Status Display -->
+                                <div v-if="isCallActive" class="mb-4 p-3 bg-white dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600">
+                                    <div class="flex items-center justify-between mb-2">
+                                        <span class="text-sm font-medium text-gray-700 dark:text-gray-300">Call in Progress</span>
+                                        <span class="text-lg font-mono font-bold text-green-600 dark:text-green-400">
+                                            {{ formatDuration(callDuration) }}
+                                        </span>
+                                    </div>
+                                    <div class="text-xs text-gray-500 dark:text-gray-400">
+                                        Status: {{ callTracking?.call_status || 'Unknown' }}
+                                    </div>
+                                </div>
+
+                                <!-- Call Actions -->
+                                <div class="flex flex-wrap gap-2">
+                                    <button
+                                        v-if="!isCallActive"
+                                        @click="initiateCall"
+                                        :disabled="!props.lead?.phone"
+                                        class="flex-1 bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white font-semibold py-2 px-4 rounded-lg text-sm transition-all duration-200 flex items-center justify-center space-x-2"
+                                    >
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+                                        </svg>
+                                        <span>{{ props.lead?.phone ? 'Auto-Dial' : 'No Phone Number' }}</span>
+                                    </button>
+
+                                    <button
+                                        v-if="isCallActive && callTracking?.call_status === 'ringing'"
+                                        @click="answerCall"
+                                        class="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-lg text-sm transition-all duration-200"
+                                    >
+                                        Answer Call
+                                    </button>
+
+                                    <button
+                                        v-if="isCallActive && callTracking?.call_status === 'answered'"
+                                        @click="completeCall"
+                                        class="flex-1 bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-4 rounded-lg text-sm transition-all duration-200"
+                                    >
+                                        Complete Call
+                                    </button>
+
+                                    <button
+                                        v-if="isCallActive"
+                                        @click="cancelCall"
+                                        class="flex-1 bg-red-600 hover:bg-red-700 text-white font-semibold py-2 px-4 rounded-lg text-sm transition-all duration-200"
+                                    >
+                                        Cancel Call
+                                    </button>
+                                </div>
+
+                                <!-- Phone Number Display -->
+                                <div v-if="props.lead?.phone" class="mt-3 text-center">
+                                    <span class="text-sm text-gray-600 dark:text-gray-400">Calling:</span>
+                                    <span class="ml-2 font-mono text-lg font-semibold text-gray-900 dark:text-white">
+                                        {{ props.lead.phone }}
+                                    </span>
                                 </div>
                             </div>
 
