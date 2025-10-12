@@ -23,34 +23,38 @@ Route::prefix('auth')->group(function () {
     Route::post('register', [AuthController::class, 'register']);
 });
 
-// Protected routes (require authentication)
-Route::middleware('auth:sanctum')->group(function () {
-    // User info
-    Route::get('/user', function (Request $request) {
-        return response()->json([
-            'success' => true,
-            'data' => [
-                'user' => [
-                    'id' => $request->user()->id,
-                    'name' => $request->user()->name,
-                    'email' => $request->user()->email,
-                    'role' => $request->user()->role,
+    // Protected routes (require authentication)
+    Route::middleware('auth:sanctum')->group(function () {
+        // User info
+        Route::get('/user', function (Request $request) {
+            return response()->json([
+                'success' => true,
+                'data' => [
+                    'user' => [
+                        'id' => $request->user()->id,
+                        'name' => $request->user()->name,
+                        'email' => $request->user()->email,
+                        'role' => $request->user()->role,
+                    ]
                 ]
-            ]
-        ]);
+            ]);
+        });
+
+        Route::get('auth/me', [AuthController::class, 'me']);
+        Route::post('auth/logout', [AuthController::class, 'logout']);
+
+        // Call Notification API Routes (for mobile app with Sanctum auth)
+        Route::get('call-notifications/pending', [CallNotificationController::class, 'getPendingNotifications']);
+        Route::post('call-notifications/processed', [CallNotificationController::class, 'markNotificationProcessed']);
     });
 
-    Route::get('auth/me', [AuthController::class, 'me']);
-    Route::post('auth/logout', [AuthController::class, 'logout']);
+    // Call Tracking API Routes (for web app with session auth)
+    Route::middleware(['auth', 'web'])->group(function () {
+        Route::apiResource('call-trackings', CallTrackingController::class);
+        Route::get('call-trackings/call/{callId}', [CallTrackingController::class, 'getByCallId']);
+        Route::get('call-trackings/active', [CallTrackingController::class, 'getActiveCalls']);
+        Route::get('call-trackings/stats', [CallTrackingController::class, 'getStats']);
 
-    // Call Tracking API Routes
-    Route::apiResource('call-trackings', CallTrackingController::class);
-    Route::get('call-trackings/call/{callId}', [CallTrackingController::class, 'getByCallId']);
-    Route::get('call-trackings/active', [CallTrackingController::class, 'getActiveCalls']);
-    Route::get('call-trackings/stats', [CallTrackingController::class, 'getStats']);
-
-    // Call Notification API Routes
-    Route::post('call-notifications/notify', [CallNotificationController::class, 'notifyAndroidCall']);
-    Route::get('call-notifications/pending', [CallNotificationController::class, 'getPendingNotifications']);
-    Route::post('call-notifications/processed', [CallNotificationController::class, 'markNotificationProcessed']);
-});
+        // Call Notification API Routes (for web app)
+        Route::post('call-notifications/notify', [CallNotificationController::class, 'notifyAndroidCall']);
+    });
