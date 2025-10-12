@@ -2,27 +2,26 @@ name: Deploy Application
 
 on:
   push:
-    branches: [ "main" ]
+    branches: ["main"]
 
 jobs:
   deploy:
-
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-    - name: List files for debugging
-      run: ls -la
-      shell: bash
+      - name: List files for debugging
+        run: ls -la
+        shell: bash
 
-    - name: Setup FTP deployment
-      uses: SamKirkland/FTP-Deploy-Action@4.3.0
-      with:
-        server: ${{ secrets.DEPLOY_HOST }}
-        username: ${{ secrets.DEPLOY_USER }}
-        password: ${{ secrets.DEPLOY_PASS }}
-        local-dir: ./
-        server-dir: ${{ secrets.DEPLOY_DIR }}
-        exclude: .gitignore
+      - name: Setup FTP deployment
+        uses: SamKirkland/FTP-Deploy-Action@4.3.0
+        with:
+          server: ${{ secrets.DEPLOY_HOST }}
+          username: ${{ secrets.DEPLOY_USER }}
+          password: ${{ secrets.DEPLOY_PASS }}
+          local-dir: ./
+          server-dir: /home/npms.pro/crm.npms.pro
+          exclude: .gitignore
