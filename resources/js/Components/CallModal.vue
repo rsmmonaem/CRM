@@ -4,7 +4,7 @@ import { useForm, router } from '@inertiajs/vue3';
 
 const props = defineProps({
     lead: Object,
-    callDetail: Object, // Optional: if completing an existing call
+    // callDetail: Object, // Optional: if completing an existing call
 });
 
 const emit = defineEmits(['close']);
