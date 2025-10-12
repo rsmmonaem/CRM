@@ -719,6 +719,7 @@ const PaginationComponent = {
         <CallModal
             v-if="showCallModal"
             :lead="selectedLead"
+            :statuses="statuses"
             :callDetail="selectedCallDetail"
             @close="closeCallModal"
         />

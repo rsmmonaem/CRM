@@ -19,10 +19,10 @@ const hasPermission = (module, action) => {
 const canManageLeadDetails = (lead) => {
     // Admin users can manage all lead details
     if (props.user?.is_admin) return true;
-    
+
     // Users with leads.create permission can manage lead details
     if (hasPermission('leads', 'create')) return true;
-    
+
     // Users can manage details for leads assigned to them
     return lead.assigned_user_id === props.user?.id;
 };
@@ -160,7 +160,7 @@ const deleteCallDetail = (callDetail) => {
                             </div>
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Status</label>
-                                <span class="mt-1 inline-flex px-2 py-1 text-xs font-semibold rounded-full 
+                                <span class="mt-1 inline-flex px-2 py-1 text-xs font-semibold rounded-full
                                     bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
                                     {{ lead.status.name }}
                                 </span>
@@ -198,8 +198,8 @@ const deleteCallDetail = (callDetail) => {
                             </button>
                         </div>
                         <div v-else class="space-y-4">
-                            <div 
-                                v-for="call in lead.lead_details" 
+                            <div
+                                v-for="call in lead.lead_details"
                                 :key="call.id"
                                 class="border border-gray-200 dark:border-gray-700 rounded-lg p-4 bg-gray-50 dark:bg-gray-900"
                             >
@@ -258,14 +258,15 @@ const deleteCallDetail = (callDetail) => {
         </div>
 
         <!-- Call Modal -->
-        <CallModal 
+        <CallModal
             v-if="showCallModal"
             :lead="lead"
+            :statuses="statuses"
             @close="closeCallModal"
         />
 
         <!-- Edit Call Modal -->
-        <EditCallModal 
+        <EditCallModal
             v-if="showEditCallModal"
             :callDetail="selectedCallDetail"
             :lead="lead"
@@ -273,7 +274,7 @@ const deleteCallDetail = (callDetail) => {
         />
 
         <!-- View Call Modal -->
-        <ViewCallModal 
+        <ViewCallModal
             v-if="showViewCallModal"
             :callDetail="selectedCallDetail"
             :lead="lead"
@@ -314,7 +315,7 @@ const deleteCallDetail = (callDetail) => {
                                 <div v-if="form.errors.lead_id" class="p-3 bg-red-50 border border-red-200 rounded-md">
                                     <p class="text-sm text-red-800">⚠️ {{ form.errors.lead_id }}</p>
                                 </div>
-                                
+
                                 <!-- Call Date -->
                                 <div>
                                     <label for="call_followup_date" class="block text-sm font-medium text-gray-700 dark:text-gray-300">

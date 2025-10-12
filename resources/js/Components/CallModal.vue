@@ -4,6 +4,7 @@ import { useForm, router } from '@inertiajs/vue3';
 
 const props = defineProps({
     lead: Object,
+    statuses: Array,
     // callDetail: Object, // Optional: if completing an existing call
 });
 
@@ -36,10 +37,16 @@ const form = useForm({
     next_call_date: '',
 });
 
+// Status change form
+const statusForm = useForm({
+    status_id: null,
+});
+
 // Watch for lead prop changes and update form
 watch(() => props.lead, (newLead) => {
     if (newLead && newLead.id) {
         form.lead_id = newLead.id;
+        statusForm.status_id = newLead.status_id;
 
         // Use lead details if available, otherwise fetch via API
         if (newLead.lead_details && newLead.lead_details.length > 0) {
@@ -49,6 +56,7 @@ watch(() => props.lead, (newLead) => {
         }
     } else {
         leadDetails.value = [];
+        statusForm.status_id = null;
     }
 }, { immediate: true });
 
@@ -94,6 +102,24 @@ const submitCall = () => {
         });
     }
 };
+
+const updateStatus = () => {
+    if (!props.lead?.id || !statusForm.status_id) {
+        return;
+    }
+
+    statusForm.put(route('leads.update', props.lead.id), {
+        onSuccess: () => {
+            // Update the lead prop to reflect the new status
+            if (props.lead) {
+                props.lead.status_id = statusForm.status_id;
+            }
+        },
+        onError: (errors) => {
+            // Handle errors silently
+        }
+    });
+};
 </script>
 
 <template>
@@ -128,9 +154,39 @@ const submitCall = () => {
                     <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
                         <!-- Left Column: Call Form -->
                         <div class="space-y-4">
-                            <h4 class="text-md font-medium text-gray-900 dark:text-white border-b border-gray-200 dark:border-gray-600 pb-2">
-                                {{ callDetail ? 'Complete Call Details' : 'New Call Details' }}
-                            </h4>
+                            <!-- Status Change Section -->
+                            <div class="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 border border-gray-200 dark:border-gray-600">
+                                <h4 class="text-sm font-semibold text-gray-900 dark:text-white mb-3 flex items-center">
+                                    <svg class="h-4 w-4 text-indigo-600 dark:text-indigo-400 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                    </svg>
+                                    Update Lead Status
+                                </h4>
+                                <div class="flex items-center space-x-3">
+                                    <div class="flex-1">
+                                        <select
+                                            v-model="statusForm.status_id"
+                                            class="w-full border-gray-300 dark:border-gray-600 dark:bg-gray-600 dark:text-white rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 text-sm"
+                                        >
+                                            <option value="">Select Status</option>
+                                            <option v-for="status in statuses" :key="status.id" :value="status.id">
+                                                {{ status.name }}
+                                            </option>
+                                        </select>
+                                    </div>
+                                    <button
+                                        type="button"
+                                        @click="updateStatus"
+                                        :disabled="!statusForm.status_id || statusForm.processing"
+                                        class="px-4 py-2 text-sm font-medium text-white bg-indigo-600 border border-transparent rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                                    >
+                                        {{ statusForm.processing ? 'Updating...' : 'Update' }}
+                                    </button>
+                                </div>
+                                <div v-if="statusForm.errors.status_id" class="mt-2 text-sm text-red-600 dark:text-red-400">
+                                    {{ statusForm.errors.status_id }}
+                                </div>
+                            </div>
 
                             <form @submit.prevent="submitCall" class="space-y-4">
                                 <div>

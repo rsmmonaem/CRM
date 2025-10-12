@@ -123,6 +123,7 @@ class LeadController extends Controller
         return Inertia::render('Leads/Show', [
             'lead' => $lead,
             'user' => $user,
+            'statuses' => Status::all(),
         ]);
     }
 

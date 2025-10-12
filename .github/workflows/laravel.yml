@@ -25,3 +25,4 @@ jobs:
           local-dir: ./
           server-dir: ${{ secrets.DEPLOY_DIR }}
           exclude: .gitignore
+                            

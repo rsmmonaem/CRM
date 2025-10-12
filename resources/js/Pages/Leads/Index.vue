@@ -233,6 +233,7 @@ const getStatusClass = (statusName) => {
         <CallModal
             v-if="showCallModal"
             :lead="selectedLead"
+            :statuses="statuses"
             @close="closeCallModal"
         />
 
