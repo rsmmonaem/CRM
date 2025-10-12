@@ -133,11 +133,14 @@ const initiateCall = async () => {
     }
 
     try {
+        // Get CSRF token with fallback
+        const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+
         const response = await fetch('/api/call-trackings', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+                'X-CSRF-TOKEN': csrfToken,
                 'X-Requested-With': 'XMLHttpRequest'
             },
             credentials: 'same-origin',
@@ -185,11 +188,14 @@ const updateCallStatus = async (status, summary = null) => {
     if (!callTracking.value?.id) return;
 
     try {
+        // Get CSRF token with fallback
+        const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+
         const response = await fetch(`/api/call-trackings/${callTracking.value.id}`, {
             method: 'PUT',
             headers: {
                 'Content-Type': 'application/json',
-                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+                'X-CSRF-TOKEN': csrfToken,
                 'X-Requested-With': 'XMLHttpRequest'
             },
             credentials: 'same-origin',
@@ -256,11 +262,14 @@ const cancelCall = () => {
 // Function to notify Android app about the call
 const notifyAndroidApp = async (callTracking) => {
     try {
+        // Get CSRF token with fallback
+        const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+
         const response = await fetch('/api/call-notifications/notify', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+                'X-CSRF-TOKEN': csrfToken,
                 'X-Requested-With': 'XMLHttpRequest'
             },
             credentials: 'same-origin',
