@@ -4,6 +4,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\CallTrackingController;
 use App\Http\Controllers\Api\AuthController;
+use App\Http\Controllers\Api\CallNotificationController;
 
 /*
 |--------------------------------------------------------------------------
@@ -47,4 +48,9 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('call-trackings/call/{callId}', [CallTrackingController::class, 'getByCallId']);
     Route::get('call-trackings/active', [CallTrackingController::class, 'getActiveCalls']);
     Route::get('call-trackings/stats', [CallTrackingController::class, 'getStats']);
+
+    // Call Notification API Routes
+    Route::post('call-notifications/notify', [CallNotificationController::class, 'notifyAndroidCall']);
+    Route::get('call-notifications/pending', [CallNotificationController::class, 'getPendingNotifications']);
+    Route::post('call-notifications/processed', [CallNotificationController::class, 'markNotificationProcessed']);
 });

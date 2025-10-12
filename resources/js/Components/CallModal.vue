@@ -157,7 +157,10 @@ const initiateCall = async () => {
             // Start call timer
             startCallTimer();
 
-            // Auto-dial functionality
+            // Send notification to Android app
+            await notifyAndroidApp(data.call_tracking);
+
+            // Auto-dial functionality (fallback for web browsers)
             const phoneNumber = props.lead.phone.replace(/\D/g, ''); // Remove non-digits
             const telLink = `tel:${phoneNumber}`;
 
@@ -248,6 +251,36 @@ const completeCall = () => {
 
 const cancelCall = () => {
     updateCallStatus('cancelled');
+};
+
+// Function to notify Android app about the call
+const notifyAndroidApp = async (callTracking) => {
+    try {
+        const response = await fetch('/api/call-notifications/notify', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+            credentials: 'same-origin',
+            body: JSON.stringify({
+                user_id: callTracking.user_id,
+                lead_id: callTracking.lead_id,
+                phone_number: props.lead.phone,
+                call_id: callTracking.call_id
+            })
+        });
+
+        if (response.ok) {
+            const data = await response.json();
+            console.log('Call notification sent to Android app:', data);
+        } else {
+            console.error('Failed to send notification to Android app');
+        }
+    } catch (error) {
+        console.error('Error sending notification to Android app:', error);
+    }
 };
 
 // Cleanup on component unmount
