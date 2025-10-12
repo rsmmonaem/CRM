@@ -23,5 +23,5 @@ jobs:
           username: ${{ secrets.DEPLOY_USER }}
           password: ${{ secrets.DEPLOY_PASS }}
           local-dir: ./
-          server-dir: /home/npms.pro/crm.npms.pro
+          server-dir: /home/npms.pro/crm.npms.pro/
           exclude: .gitignore
