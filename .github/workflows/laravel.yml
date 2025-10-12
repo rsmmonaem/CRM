@@ -6,23 +6,28 @@ on:
 
 jobs:
   deploy:
-
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-    - name: List files for debugging
-      run: ls -la
-      shell: bash
-
-    - name: Setup FTP deployment
-      uses: SamKirkland/FTP-Deploy-Action@4.3.0
-      with:
-        server: ${{ secrets.DEPLOY_HOST }}
-        username: ${{ secrets.DEPLOY_USER }}
-        password: ${{ secrets.DEPLOY_PASS }}
-        local-dir: ./
-        server-dir: ${{ secrets.DEPLOY_DIR }}
-        exclude: .gitignore
+      - name: Deploy via FTPS
+        uses: SamKirkland/FTP-Deploy-Action@4.3.0
+        with:
+          server: ${{ secrets.DEPLOY_HOST }}
+          username: ${{ secrets.DEPLOY_USER }}
+          password: ${{ secrets.DEPLOY_PASS }}
+          protocol: ftps
+          port: 21
+          security: loose
+          passive: true
+          local-dir: ./
+          server-dir: ${{ secrets.DEPLOY_DIR }}
+          exclude: |
+            **/.git*
+            **/.github*
+            **/node_modules/**
+            **/vendor/**
+            **/.env
+            **/tests/**
