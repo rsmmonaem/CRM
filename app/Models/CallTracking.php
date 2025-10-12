@@ -13,6 +13,7 @@ class CallTracking extends Model
     protected $fillable = [
         'lead_id',
         'user_id',
+        'lead_detail_id',
         'phone_number',
         'call_started_at',
         'call_ended_at',
@@ -48,6 +49,14 @@ class CallTracking extends Model
     public function user()
     {
         return $this->belongsTo(User::class);
+    }
+
+    /**
+     * Get the lead detail associated with this call tracking
+     */
+    public function leadDetail()
+    {
+        return $this->belongsTo(LeadDetail::class);
     }
 
     /**
@@ -112,7 +121,7 @@ class CallTracking extends Model
     /**
      * Mark call as completed
      */
-    public function markAsCompleted($summary = null)
+    public function markAsCompleted($summary = null, $nextCallDate = null)
     {
         $this->update([
             'call_ended_at' => now(),
@@ -120,6 +129,30 @@ class CallTracking extends Model
             'call_summary' => $summary
         ]);
         $this->calculateDuration();
+
+        // Create or update lead detail
+        $this->createOrUpdateLeadDetail($summary, $nextCallDate);
+    }
+
+    /**
+     * Create or update lead detail when call is completed
+     */
+    public function createOrUpdateLeadDetail($summary = null, $nextCallDate = null)
+    {
+        $leadDetail = LeadDetail::create([
+            'lead_id' => $this->lead_id,
+            'call_followup_date' => now(),
+            'call_followup_summary' => $summary ?: $this->call_summary,
+            'next_call_date' => $nextCallDate,
+            'called_at' => now(),
+            'created_by' => $this->user_id,
+            'assigned_to' => $this->user_id,
+        ]);
+
+        // Link the call tracking to the lead detail
+        $this->update(['lead_detail_id' => $leadDetail->id]);
+
+        return $leadDetail;
     }
 
     /**

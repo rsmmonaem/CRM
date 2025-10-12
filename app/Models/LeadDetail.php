@@ -44,6 +44,12 @@ class LeadDetail extends Model
         return $this->belongsTo(User::class, 'assigned_to');
     }
 
+    /** 🔹 Relationship: Call Tracking */
+    public function callTracking()
+    {
+        return $this->hasOne(CallTracking::class);
+    }
+
     /** 🔹 Scope: Today's Calls (next_call_date = today and called_at IS NULL) */
     public function scopeTodaysCalls($query)
     {
