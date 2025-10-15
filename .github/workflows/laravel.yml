@@ -12,18 +12,18 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Deploy via FTPS
+      - name: Deploy via FTP
         uses: SamKirkland/FTP-Deploy-Action@4.3.0
         with:
-          server: ${{ secrets.DEPLOY_HOST }}
-          username: ${{ secrets.DEPLOY_USER }}
-          password: ${{ secrets.DEPLOY_PASS }}
-          protocol: ftp
-          port: 21
-          security: loose
-          passive: true
-          local-dir: ./
-          server-dir: ${{ secrets.DEPLOY_DIR }}
+          server: ${{ secrets.DEPLOY_HOST }}       # your FTP host
+          username: ${{ secrets.DEPLOY_USER }}     # your FTP username
+          password: ${{ secrets.DEPLOY_PASS }}     # your FTP password
+          protocol: ftp                             # ftp or ftps
+          port: 21                                  # ftp = 21, ftps = 21
+          security: loose                            # for ftps self-signed certs
+          local-dir: ./                              # upload repo root
+          server-dir: ${{ secrets.DEPLOY_DIR }}     # remote directory
+          log-level: verbose
           exclude: |
             **/.git*
             **/.github*
