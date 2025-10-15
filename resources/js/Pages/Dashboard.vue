@@ -4,6 +4,7 @@ import { Head, Link, router } from '@inertiajs/vue3';
 import { ref, computed } from 'vue';
 import CallModal from '@/Components/CallModal.vue';
 import NewLeadModal from '@/Components/NewLeadModal.vue';
+import LeadShowModal from '@/Components/LeadShowModal.vue';
 
 const props = defineProps({
     todaysCalls: Array,
@@ -25,6 +26,10 @@ const selectedCallDetail = ref(null);
 
 // New Lead Modal state
 const showNewLeadModal = ref(false);
+
+// Lead Show Modal state
+const showLeadModal = ref(false);
+const selectedLeadForShow = ref(null);
 
 // Pagination state for each section
 const todaysCallsPage = ref(1);
@@ -51,6 +56,17 @@ const openNewLeadModal = () => {
 
 const closeNewLeadModal = () => {
     showNewLeadModal.value = false;
+};
+
+// Lead Show Modal handlers
+const openLeadModal = (lead) => {
+    selectedLeadForShow.value = lead;
+    showLeadModal.value = true;
+};
+
+const closeLeadModal = () => {
+    showLeadModal.value = false;
+    selectedLeadForShow.value = null;
 };
 
 
@@ -410,14 +426,14 @@ const PaginationComponent = {
                                 </div>
                             </div>
                             <div class="flex space-x-2">
-                                <button @click="openCallModal(lead, lead.lead_details && lead.lead_details.length > 0 ? lead.lead_details[0] : null)"
+                                <button @click="openLeadModal(lead)"
                                     class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded text-sm transition-colors">
-                                    Call
+                                    View Details
                                 </button>
-                                <Link :href="route('leads.show', lead.id)"
+                                <button @click="openCallModal(lead, lead.lead_details && lead.lead_details.length > 0 ? lead.lead_details[0] : null)"
                                     class="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded text-sm transition-colors">
-                                    View Lead
-                                </Link>
+                                    Make Call
+                                </button>
                             </div>
                         </div>
                     </div>
@@ -428,31 +444,42 @@ const PaginationComponent = {
                     <button
                         v-if="todaysCallsPage > 1"
                         @click="setTodaysCallsPage(todaysCallsPage - 1)"
-                        class="px-3 py-1 text-sm bg-gray-200 hover:bg-gray-300 rounded-md transition-colors"
+                        class="px-4 py-2 text-sm bg-gray-200 hover:bg-gray-300 rounded-md transition-colors"
                     >
-                        ←
+                        Previous
                     </button>
 
                     <button
-                        v-for="page in Array.from({length: todaysCallsTotalPages}, (_, i) => i + 1)"
-                        :key="page"
-                        @click="setTodaysCallsPage(page)"
+                        @click="setTodaysCallsPage(1)"
                         :class="[
-                            'px-3 py-1 text-sm rounded-md transition-colors',
-                            page === todaysCallsPage
+                            'px-4 py-2 text-sm rounded-md transition-colors',
+                            1 === todaysCallsPage
                                 ? 'bg-blue-500 text-white'
                                 : 'bg-gray-200 hover:bg-gray-300'
                         ]"
                     >
-                        {{ page }}
+                        1
+                    </button>
+
+                    <button
+                        v-if="todaysCallsTotalPages > 1"
+                        @click="setTodaysCallsPage(2)"
+                        :class="[
+                            'px-4 py-2 text-sm rounded-md transition-colors',
+                            2 === todaysCallsPage
+                                ? 'bg-blue-500 text-white'
+                                : 'bg-gray-200 hover:bg-gray-300'
+                        ]"
+                    >
+                        2
                     </button>
 
                     <button
                         v-if="todaysCallsPage < todaysCallsTotalPages"
                         @click="setTodaysCallsPage(todaysCallsPage + 1)"
-                        class="px-3 py-1 text-sm bg-gray-200 hover:bg-gray-300 rounded-md transition-colors"
+                        class="px-4 py-2 text-sm bg-gray-200 hover:bg-gray-300 rounded-md transition-colors"
                     >
-                        →
+                        Next
                     </button>
                 </div>
             </div>
@@ -505,14 +532,14 @@ const PaginationComponent = {
                                 </div>
                             </div>
                             <div class="flex space-x-2">
-                                <button @click="openCallModal(lead, lead.lead_details && lead.lead_details.length > 0 ? lead.lead_details[0] : null)"
+                                <button @click="openLeadModal(lead)"
                                     class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded text-sm transition-colors">
-                                    Call
+                                    View Details
                                 </button>
-                                <Link :href="route('leads.show', lead.id)"
+                                <button @click="openCallModal(lead, lead.lead_details && lead.lead_details.length > 0 ? lead.lead_details[0] : null)"
                                     class="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded text-sm transition-colors">
-                                    View Lead
-                                </Link>
+                                    Make Call
+                                </button>
                             </div>
                         </div>
                     </div>
@@ -523,31 +550,42 @@ const PaginationComponent = {
                     <button
                         v-if="pendingCallsPage > 1"
                         @click="setPendingCallsPage(pendingCallsPage - 1)"
-                        class="px-3 py-1 text-sm bg-gray-200 hover:bg-gray-300 rounded-md transition-colors"
+                        class="px-4 py-2 text-sm bg-gray-200 hover:bg-gray-300 rounded-md transition-colors"
                     >
-                        ←
+                        Previous
                     </button>
 
                     <button
-                        v-for="page in Array.from({length: pendingCallsTotalPages}, (_, i) => i + 1)"
-                        :key="page"
-                        @click="setPendingCallsPage(page)"
+                        @click="setPendingCallsPage(1)"
                         :class="[
-                            'px-3 py-1 text-sm rounded-md transition-colors',
-                            page === pendingCallsPage
+                            'px-4 py-2 text-sm rounded-md transition-colors',
+                            1 === pendingCallsPage
                                 ? 'bg-red-500 text-white'
                                 : 'bg-gray-200 hover:bg-gray-300'
                         ]"
                     >
-                        {{ page }}
+                        1
+                    </button>
+
+                    <button
+                        v-if="pendingCallsTotalPages > 1"
+                        @click="setPendingCallsPage(2)"
+                        :class="[
+                            'px-4 py-2 text-sm rounded-md transition-colors',
+                            2 === pendingCallsPage
+                                ? 'bg-red-500 text-white'
+                                : 'bg-gray-200 hover:bg-gray-300'
+                        ]"
+                    >
+                        2
                     </button>
 
                     <button
                         v-if="pendingCallsPage < pendingCallsTotalPages"
                         @click="setPendingCallsPage(pendingCallsPage + 1)"
-                        class="px-3 py-1 text-sm bg-gray-200 hover:bg-gray-300 rounded-md transition-colors"
+                        class="px-4 py-2 text-sm bg-gray-200 hover:bg-gray-300 rounded-md transition-colors"
                     >
-                        →
+                        Next
                     </button>
                 </div>
             </div>
@@ -601,14 +639,14 @@ const PaginationComponent = {
                             </div>
                         </div>
                         <div class="flex space-x-2">
+                            <button @click="openLeadModal(lead)"
+                                class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded text-sm transition-colors">
+                                View Details
+                            </button>
                             <button @click="openCallModal(lead, lead.lead_details && lead.lead_details.length > 0 ? lead.lead_details[0] : null)"
                                 class="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded text-sm transition-colors">
-                                Schedule
+                                Schedule Call
                             </button>
-                            <Link :href="route('leads.show', lead.id)"
-                                class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded text-sm transition-colors">
-                                View Lead
-                            </Link>
                         </div>
                     </div>
                 </div>
@@ -619,31 +657,42 @@ const PaginationComponent = {
                 <button
                     v-if="upcomingCallsPage > 1"
                     @click="setUpcomingCallsPage(upcomingCallsPage - 1)"
-                    class="px-3 py-1 text-sm bg-gray-200 hover:bg-gray-300 rounded-md transition-colors"
+                    class="px-4 py-2 text-sm bg-gray-200 hover:bg-gray-300 rounded-md transition-colors"
                 >
-                    ←
+                    Previous
                 </button>
 
                 <button
-                    v-for="page in Array.from({length: upcomingCallsTotalPages}, (_, i) => i + 1)"
-                    :key="page"
-                    @click="setUpcomingCallsPage(page)"
+                    @click="setUpcomingCallsPage(1)"
                     :class="[
-                        'px-3 py-1 text-sm rounded-md transition-colors',
-                        page === upcomingCallsPage
+                        'px-4 py-2 text-sm rounded-md transition-colors',
+                        1 === upcomingCallsPage
                             ? 'bg-green-500 text-white'
                             : 'bg-gray-200 hover:bg-gray-300'
                     ]"
                 >
-                    {{ page }}
+                    1
+                </button>
+
+                <button
+                    v-if="upcomingCallsTotalPages > 1"
+                    @click="setUpcomingCallsPage(2)"
+                    :class="[
+                        'px-4 py-2 text-sm rounded-md transition-colors',
+                        2 === upcomingCallsPage
+                            ? 'bg-green-500 text-white'
+                            : 'bg-gray-200 hover:bg-gray-300'
+                    ]"
+                >
+                    2
                 </button>
 
                 <button
                     v-if="upcomingCallsPage < upcomingCallsTotalPages"
                     @click="setUpcomingCallsPage(upcomingCallsPage + 1)"
-                    class="px-3 py-1 text-sm bg-gray-200 hover:bg-gray-300 rounded-md transition-colors"
+                    class="px-4 py-2 text-sm bg-gray-200 hover:bg-gray-300 rounded-md transition-colors"
                 >
-                    →
+                    Next
                 </button>
             </div>
         </div>
@@ -750,6 +799,18 @@ const PaginationComponent = {
             :statuses="statuses"
             :users="modalUsers"
             @close="closeNewLeadModal"
+        />
+
+        <!-- Lead Show Modal -->
+        <LeadShowModal
+            v-if="showLeadModal"
+            :show="showLeadModal"
+            :lead="selectedLeadForShow"
+            :services="services"
+            :statuses="statuses"
+            :users="modalUsers"
+            :user="user"
+            @close="closeLeadModal"
         />
     </ModernLayout>
 </template>
