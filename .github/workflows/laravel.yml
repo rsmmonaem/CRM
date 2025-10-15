@@ -2,28 +2,30 @@ name: Deploy Application
 
 on:
   push:
-    branches: [ "main" ]
+    branches: [ "main" ] # Runs deployment when you push to the main branch
 
 jobs:
   deploy:
+    name: 🚀 Deploy via SFTP
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout code
+      - name: 🧾 Checkout repository
         uses: actions/checkout@v4
 
-      - name: Deploy via FTPS
+      - name: 📂 Deploy files to server via SFTP
         uses: SamKirkland/FTP-Deploy-Action@4.3.0
         with:
-          server: ${{ secrets.DEPLOY_HOST }}
-          username: ${{ secrets.DEPLOY_USER }}
-          password: ${{ secrets.DEPLOY_PASS }}
-          protocol: ftps
-          port: 21
-          security: loose
-          passive: true
-          local-dir: ./
-          server-dir: ${{ secrets.DEPLOY_DIR }}
+          server: ${{ secrets.DEPLOY_HOST }}       # e.g. ftp.yourdomain.com
+          username: ${{ secrets.DEPLOY_USER }}     # your FTP/SFTP username
+          password: ${{ secrets.DEPLOY_PASS }}     # your FTP/SFTP password
+          protocol: sftp                           # use SFTP (secure SSH transfer)
+          port: 22                                 # SFTP default port
+          server-dir: ${{ secrets.DEPLOY_DIR }}    # remote directory (e.g. /public_html/)
+          local-dir: ./                            # what to upload (root of your repo)
+          passive: true                            # keep this true for SFTP
+          log-level: verbose                       # show detailed logs in Actions output
+
           exclude: |
             **/.git*
             **/.github*
@@ -31,3 +33,6 @@ jobs:
             **/vendor/**
             **/.env
             **/tests/**
+            **/storage/**
+            **/*.log
+            **/.DS_Store
