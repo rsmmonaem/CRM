@@ -1,38 +1,38 @@
-name: Deploy Application
+name: Deploy Laravel Application
 
 on:
   push:
-    branches: [ "main" ] # Runs deployment when you push to the main branch
+    branches: [ "main" ]
 
 jobs:
   deploy:
-    name: 🚀 Deploy via SFTP
     runs-on: ubuntu-latest
 
     steps:
-      - name: 🧾 Checkout repository
+      - name: 🧾 Checkout code
         uses: actions/checkout@v4
 
-      - name: 📂 Deploy files to server via SFTP
+      - name: 🧰 List files for debugging
+        run: ls -la
+        shell: bash
+
+      - name: 🚀 Deploy via SFTP
         uses: SamKirkland/FTP-Deploy-Action@4.3.0
         with:
-          server: ${{ secrets.DEPLOY_HOST }}       # e.g. ftp.yourdomain.com
+          server: ${{ secrets.DEPLOY_HOST }}       # e.g. ftp.upseba.com.bd
           username: ${{ secrets.DEPLOY_USER }}     # your FTP/SFTP username
-          password: ${{ secrets.DEPLOY_PASS }}     # your FTP/SFTP password
-          protocol: sftp                           # use SFTP (secure SSH transfer)
-          port: 22                                 # SFTP default port
+          password: ${{ secrets.DEPLOY_PASS }}     # stored securely
+          protocol: ftp                           # use sftp (secure)
+          port: 21                                 # default SFTP port
+          local-dir: ./                            # what to upload
           server-dir: ${{ secrets.DEPLOY_DIR }}    # remote directory (e.g. /public_html/)
-          local-dir: ./                            # what to upload (root of your repo)
-          passive: true                            # keep this true for SFTP
-          log-level: verbose                       # show detailed logs in Actions output
-
+          log-level: verbose                       # detailed logs
           exclude: |
             **/.git*
             **/.github*
             **/node_modules/**
             **/vendor/**
             **/.env
-            **/tests/**
             **/storage/**
-            **/*.log
+            **/tests/**
             **/.DS_Store
