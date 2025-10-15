@@ -22,8 +22,8 @@ jobs:
           server: ${{ secrets.DEPLOY_HOST }}       # e.g. ftp.upseba.com.bd
           username: ${{ secrets.DEPLOY_USER }}     # your FTP/SFTP username
           password: ${{ secrets.DEPLOY_PASS }}     # stored securely
-          protocol: ftp                           # use sftp (secure)
-          port: 21                                 # default SFTP port
+          protocol: sftp                           # use sftp (secure)
+          port: 22                                 # default SFTP port
           local-dir: ./                            # what to upload
           server-dir: ${{ secrets.DEPLOY_DIR }}    # remote directory (e.g. /public_html/)
           log-level: verbose                       # detailed logs
