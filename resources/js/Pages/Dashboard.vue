@@ -391,24 +391,30 @@ const PaginationComponent = {
             </div>
             <div v-else>
                 <div class="space-y-4">
-                    <div v-for="call in paginatedTodaysCalls" :key="call.id"
+                    <div v-for="lead in paginatedTodaysCalls" :key="lead.id"
                         class="border border-gray-200 dark:border-gray-700 rounded-lg p-4 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
                         <div class="flex justify-between items-start">
                             <div class="flex-1">
-                                <h4 class="text-lg font-medium text-gray-900 dark:text-white">{{ call.lead.name }}</h4>
-                                <p class="text-sm text-gray-600 dark:text-gray-400">{{ call.lead.company_name }}</p>
-                                <p class="text-sm text-gray-500 dark:text-gray-400">{{ call.lead.phone }} • {{ call.lead.email }}</p>
-                                <p class="text-sm text-gray-500 dark:text-gray-400 mt-2">{{ call.call_followup_summary }}</p>
-                                <p class="text-xs text-blue-500 mt-1">
-                                    Scheduled: {{ new Date(call.next_call_date).toLocaleDateString() }}
+                                <h4 class="text-lg font-medium text-gray-900 dark:text-white">{{ lead.name || 'N/A' }}</h4>
+                                <p class="text-sm text-gray-600 dark:text-gray-400">{{ lead.company_name || 'N/A' }}</p>
+                                <p class="text-sm text-gray-500 dark:text-gray-400">{{ lead.phone || 'N/A' }} • {{ lead.email || 'N/A' }}</p>
+                                <p class="text-sm text-gray-500 dark:text-gray-400 mt-2">
+                                    {{ lead.lead_details && lead.lead_details.length > 0 ? lead.lead_details[0].call_followup_summary || 'No summary available' : 'No call details available' }}
                                 </p>
+                                <p class="text-xs text-blue-500 mt-1">
+                                    Scheduled: {{ lead.lead_details && lead.lead_details.length > 0 ? new Date(lead.lead_details[0].next_call_date).toLocaleDateString() : 'No date set' }}
+                                </p>
+                                <div class="flex items-center space-x-2 mt-2">
+                                    <span class="px-2 py-1 text-xs bg-blue-100 text-blue-800 rounded-full">{{ lead.status?.name || 'No Status' }}</span>
+                                    <span class="px-2 py-1 text-xs bg-green-100 text-green-800 rounded-full">{{ lead.service?.name || 'No Service' }}</span>
+                                </div>
                             </div>
                             <div class="flex space-x-2">
-                                <button @click="openCallModal(call.lead, call)"
+                                <button @click="openCallModal(lead, lead.lead_details && lead.lead_details.length > 0 ? lead.lead_details[0] : null)"
                                     class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded text-sm transition-colors">
                                     Call
                                 </button>
-                                <Link :href="route('leads.show', call.lead.id)"
+                                <Link :href="route('leads.show', lead.id)"
                                     class="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded text-sm transition-colors">
                                     View Lead
                                 </Link>
@@ -480,24 +486,30 @@ const PaginationComponent = {
             </div>
             <div v-else>
                 <div class="space-y-4">
-                    <div v-for="call in paginatedPendingCalls" :key="call.id"
+                    <div v-for="lead in paginatedPendingCalls" :key="lead.id"
                         class="border border-gray-200 dark:border-gray-700 rounded-lg p-4 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
                         <div class="flex justify-between items-start">
                             <div class="flex-1">
-                                <h4 class="text-lg font-medium text-gray-900 dark:text-white">{{ call.lead.name }}</h4>
-                                <p class="text-sm text-gray-600 dark:text-gray-400">{{ call.lead.company_name }}</p>
-                                <p class="text-sm text-gray-500 dark:text-gray-400">{{ call.lead.phone }} • {{ call.lead.email }}</p>
-                                <p class="text-sm text-gray-500 dark:text-gray-400 mt-2">{{ call.call_followup_summary }}</p>
-                                <p class="text-xs text-red-500 mt-1">
-                                    Overdue: {{ new Date(call.next_call_date).toLocaleDateString() }}
+                                <h4 class="text-lg font-medium text-gray-900 dark:text-white">{{ lead.name || 'N/A' }}</h4>
+                                <p class="text-sm text-gray-600 dark:text-gray-400">{{ lead.company_name || 'N/A' }}</p>
+                                <p class="text-sm text-gray-500 dark:text-gray-400">{{ lead.phone || 'N/A' }} • {{ lead.email || 'N/A' }}</p>
+                                <p class="text-sm text-gray-500 dark:text-gray-400 mt-2">
+                                    {{ lead.lead_details && lead.lead_details.length > 0 ? lead.lead_details[0].call_followup_summary || 'No summary available' : 'No call details available' }}
                                 </p>
+                                <p class="text-xs text-red-500 mt-1">
+                                    Overdue: {{ lead.lead_details && lead.lead_details.length > 0 ? new Date(lead.lead_details[0].next_call_date).toLocaleDateString() : 'No date set' }}
+                                </p>
+                                <div class="flex items-center space-x-2 mt-2">
+                                    <span class="px-2 py-1 text-xs bg-red-100 text-red-800 rounded-full">{{ lead.status?.name || 'No Status' }}</span>
+                                    <span class="px-2 py-1 text-xs bg-green-100 text-green-800 rounded-full">{{ lead.service?.name || 'No Service' }}</span>
+                                </div>
                             </div>
                             <div class="flex space-x-2">
-                                <button @click="openCallModal(call.lead, call)"
+                                <button @click="openCallModal(lead, lead.lead_details && lead.lead_details.length > 0 ? lead.lead_details[0] : null)"
                                     class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded text-sm transition-colors">
                                     Call
                                 </button>
-                                <Link :href="route('leads.show', call.lead.id)"
+                                <Link :href="route('leads.show', lead.id)"
                                     class="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded text-sm transition-colors">
                                     View Lead
                                 </Link>
@@ -570,24 +582,30 @@ const PaginationComponent = {
         </div>
         <div v-else>
             <div class="space-y-4">
-                <div v-for="call in paginatedUpcomingCalls" :key="call.id"
+                <div v-for="lead in paginatedUpcomingCalls" :key="lead.id"
                     class="border border-gray-200 dark:border-gray-700 rounded-lg p-4 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
                     <div class="flex justify-between items-start">
                         <div class="flex-1">
-                            <h4 class="text-lg font-medium text-gray-900 dark:text-white">{{ call.lead.name }}</h4>
-                            <p class="text-sm text-gray-600 dark:text-gray-400">{{ call.lead.company_name }}</p>
-                            <p class="text-sm text-gray-500 dark:text-gray-400">{{ call.lead.phone }} • {{ call.lead.email }}</p>
-                            <p class="text-sm text-gray-500 dark:text-gray-400 mt-2">{{ call.call_followup_summary }}</p>
-                            <p class="text-xs text-green-500 mt-1">
-                                Scheduled: {{ new Date(call.next_call_date).toLocaleDateString() }}
+                            <h4 class="text-lg font-medium text-gray-900 dark:text-white">{{ lead.name || 'N/A' }}</h4>
+                            <p class="text-sm text-gray-600 dark:text-gray-400">{{ lead.company_name || 'N/A' }}</p>
+                            <p class="text-sm text-gray-500 dark:text-gray-400">{{ lead.phone || 'N/A' }} • {{ lead.email || 'N/A' }}</p>
+                            <p class="text-sm text-gray-500 dark:text-gray-400 mt-2">
+                                {{ lead.lead_details && lead.lead_details.length > 0 ? lead.lead_details[0].call_followup_summary || 'No summary available' : 'No call details available' }}
                             </p>
+                            <p class="text-xs text-green-500 mt-1">
+                                Scheduled: {{ lead.lead_details && lead.lead_details.length > 0 ? new Date(lead.lead_details[0].next_call_date).toLocaleDateString() : 'No date set' }}
+                            </p>
+                            <div class="flex items-center space-x-2 mt-2">
+                                <span class="px-2 py-1 text-xs bg-green-100 text-green-800 rounded-full">{{ lead.status?.name || 'No Status' }}</span>
+                                <span class="px-2 py-1 text-xs bg-blue-100 text-blue-800 rounded-full">{{ lead.service?.name || 'No Service' }}</span>
+                            </div>
                         </div>
                         <div class="flex space-x-2">
-                            <button @click="openCallModal(call.lead)"
+                            <button @click="openCallModal(lead, lead.lead_details && lead.lead_details.length > 0 ? lead.lead_details[0] : null)"
                                 class="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded text-sm transition-colors">
                                 Schedule
                             </button>
-                            <Link :href="route('leads.show', call.lead.id)"
+                            <Link :href="route('leads.show', lead.id)"
                                 class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded text-sm transition-colors">
                                 View Lead
                             </Link>
@@ -681,7 +699,7 @@ const PaginationComponent = {
                                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">{{ lead.service.name }}</td>
                                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">{{ lead.assigned_user.name }}</td>
                                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                                    {{ lead.lead_details && lead.lead_details.length > 0 ? new Date(lead.lead_details[lead.lead_details.length - 1].next_call_date).toLocaleDateString() : '-' }}
+                                    {{ lead.lead_details && lead.lead_details.length > 0 ? new Date(lead.lead_details[0].next_call_date).toLocaleDateString() : '-' }}
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
                                     <div class="flex space-x-1">

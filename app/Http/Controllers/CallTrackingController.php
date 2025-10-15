@@ -51,7 +51,8 @@ class CallTrackingController extends Controller
             'phone_number' => 'required|string',
             'device_type' => 'in:web,android,ios',
             'device_id' => 'nullable|string',
-            'is_auto_dialed' => 'boolean'
+            'is_auto_dialed' => 'boolean',
+            'lead_detail_id' => 'nullable|exists:lead_details,id'
         ]);
 
         if ($validator->fails()) {
@@ -69,6 +70,7 @@ class CallTrackingController extends Controller
         $callTracking = CallTracking::create([
             'lead_id' => $request->lead_id,
             'user_id' => $user->id,
+            'lead_detail_id' => $request->lead_detail_id,
             'phone_number' => $request->phone_number,
             'call_id' => Str::uuid(),
             'device_type' => $request->device_type ?? 'web',

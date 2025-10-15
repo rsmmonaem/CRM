@@ -139,6 +139,21 @@ class CallTracking extends Model
      */
     public function createOrUpdateLeadDetail($summary = null, $nextCallDate = null)
     {
+        // If we already have a linked lead detail, update it
+        if ($this->lead_detail_id) {
+            $leadDetail = LeadDetail::find($this->lead_detail_id);
+            if ($leadDetail) {
+                $leadDetail->update([
+                    'call_followup_date' => now(),
+                    'call_followup_summary' => $summary ?: $this->call_summary,
+                    'next_call_date' => $nextCallDate,
+                    'called_at' => now(),
+                ]);
+                return $leadDetail;
+            }
+        }
+
+        // Otherwise, create a new lead detail
         $leadDetail = LeadDetail::create([
             'lead_id' => $this->lead_id,
             'call_followup_date' => now(),

@@ -148,7 +148,8 @@ const initiateCall = async () => {
                 lead_id: props.lead.id,
                 phone_number: props.lead.phone,
                 device_type: 'web',
-                is_auto_dialed: true
+                is_auto_dialed: true,
+                lead_detail_id: props.callDetail?.id || null // Link to existing LeadDetail if available
             })
         });
 
