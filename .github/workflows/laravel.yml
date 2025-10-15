@@ -1,4 +1,4 @@
-name: Deploy Laravel Application
+name: Deploy Application
 
 on:
   push:
@@ -9,30 +9,25 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: 🧾 Checkout code
+      - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: 🧰 List files for debugging
-        run: ls -la
-        shell: bash
-
-      - name: 🚀 Deploy via SFTP
+      - name: Deploy via FTPS
         uses: SamKirkland/FTP-Deploy-Action@4.3.0
         with:
-          server: ${{ secrets.DEPLOY_HOST }}       # e.g. ftp.upseba.com.bd
-          username: ${{ secrets.DEPLOY_USER }}     # your FTP/SFTP username
-          password: ${{ secrets.DEPLOY_PASS }}     # stored securely
+          server: ${{ secrets.DEPLOY_HOST }}
+          username: ${{ secrets.DEPLOY_USER }}
+          password: ${{ secrets.DEPLOY_PASS }}
           protocol: ftps
-          port: 21                        # default SFTP port
-          local-dir: ./                            # what to upload
-          server-dir: ${{ secrets.DEPLOY_DIR }}    # remote directory (e.g. /public_html/)
-          log-level: verbose                       # detailed logs
+          port: 21
+          security: loose
+          passive: true
+          local-dir: ./
+          server-dir: ${{ secrets.DEPLOY_DIR }}
           exclude: |
             **/.git*
             **/.github*
             **/node_modules/**
             **/vendor/**
             **/.env
-            **/storage/**
             **/tests/**
-            **/.DS_Store
