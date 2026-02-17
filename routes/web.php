@@ -46,6 +46,7 @@ Route::middleware('auth')->group(function () {
     // Lead routes with proper permission middleware
     Route::get('leads', [LeadController::class, 'index'])->name('leads.index')->middleware('permission:leads,view');
     Route::post('leads', [LeadController::class, 'store'])->name('leads.store')->middleware('permission:leads,create');
+    Route::post('leads/import', [LeadController::class, 'import'])->name('leads.import')->middleware('permission:leads,create');
     Route::get('leads/{lead}', [LeadController::class, 'show'])->name('leads.show')->middleware('permission:leads,view');
     Route::get('leads/{lead}/edit', [LeadController::class, 'edit'])->name('leads.edit')->middleware('permission:leads,edit');
     Route::put('leads/{lead}', [LeadController::class, 'update'])->name('leads.update')->middleware('permission:leads,edit');

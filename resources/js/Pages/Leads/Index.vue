@@ -5,6 +5,8 @@ import { ref, computed } from 'vue';
 import CallModal from '@/Components/CallModal.vue';
 import NewLeadModal from '@/Components/NewLeadModal.vue';
 import EditLeadModal from '@/Components/EditLeadModal.vue';
+import LeadShowModal from '@/Components/LeadShowModal.vue';
+import ImportLeadModal from '@/Components/ImportLeadModal.vue';
 
 const props = defineProps({
     leads: Array,
@@ -20,6 +22,9 @@ const selectedLead = ref(null);
 const showEditModal = ref(false);
 const editingLead = ref(null);
 const showNewLeadModal = ref(false);
+const showImportModal = ref(false);
+const showLeadModal = ref(false);
+const selectedLeadForShow = ref(null);
 const callButtonClicked = ref(new Set());
 const viewButtonClicked = ref(new Set());
 const editButtonClicked = ref(new Set());
@@ -193,6 +198,24 @@ const closeNewLeadModal = () => {
     showNewLeadModal.value = false;
 };
 
+const openLeadModal = (lead) => {
+    selectedLeadForShow.value = lead;
+    showLeadModal.value = true;
+};
+
+const closeLeadModal = () => {
+    showLeadModal.value = false;
+    selectedLeadForShow.value = null;
+};
+
+const openImportModal = () => {
+    showImportModal.value = true;
+};
+
+const closeImportModal = () => {
+    showImportModal.value = false;
+};
+
 
 const getStatusClass = (statusName) => {
     const name = (statusName || '').toLowerCase();
@@ -252,6 +275,18 @@ const getStatusClass = (statusName) => {
                         </svg>
                         <span>Add New Lead</span>
                     </button>
+
+                    <button
+                        v-if="hasPermission('leads', 'create')"
+                        @click="openImportModal"
+                        class="bg-indigo-500 hover:bg-indigo-600 text-white font-semibold py-3 px-6 rounded-xl shadow-lg transition-all duration-200 flex items-center justify-center space-x-2"
+                    >
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path>
+                        </svg>
+                        <span>Import Leads</span>
+                    </button>
+
                 </div>
             </div>
         </div>
@@ -515,7 +550,7 @@ const getStatusClass = (statusName) => {
     <!-- Action Buttons -->
     <div class="mt-3 flex flex-wrap gap-2">
       <button @click="openCallModal(lead)" class="flex-1 bg-blue-500 hover:bg-blue-600 dark:hover:bg-blue-400 text-white font-semibold py-2 px-2 rounded text-xs transition-all duration-200 hover:scale-105 hover:shadow-lg">Call</button>
-      <Link :href="route('leads.show', lead.id)" class="flex-1 bg-green-500 hover:bg-green-600 dark:hover:bg-green-400 text-white font-semibold py-2 px-2 rounded text-xs text-center transition-all duration-200 hover:scale-105 hover:shadow-lg">View</Link>
+      <button @click="openLeadModal(lead)" class="flex-1 bg-green-500 hover:bg-green-600 dark:hover:bg-green-400 text-white font-semibold py-2 px-2 rounded text-xs text-center transition-all duration-200 hover:scale-105 hover:shadow-lg">View</button>
       <button @click="openEditModal(lead)" class="flex-1 bg-yellow-500 hover:bg-yellow-600 dark:hover:bg-yellow-400 text-white font-semibold py-2 px-2 rounded text-xs transition-all duration-200 hover:scale-105 hover:shadow-lg">Edit</button>
       <button @click="deleteLead(lead)" class="flex-1 bg-red-500 hover:bg-red-600 dark:hover:bg-red-400 text-white font-semibold py-2 px-2 rounded text-xs transition-all duration-200 hover:scale-105 hover:shadow-lg">Delete</button>
     </div>
@@ -551,6 +586,27 @@ const getStatusClass = (statusName) => {
             :statuses="statuses"
             :users="users"
             @close="closeEditModal"
+        />
+
+        <!-- Lead Show Modal -->
+        <LeadShowModal
+            v-if="showLeadModal"
+            :show="showLeadModal"
+            :lead="selectedLeadForShow"
+            :services="services"
+            :statuses="statuses"
+            :users="users"
+            :user="user"
+            @close="closeLeadModal"
+        />
+
+        <!-- Import Lead Modal -->
+        <ImportLeadModal
+            v-if="showImportModal"
+            :show="showImportModal"
+            :services="services"
+            :statuses="statuses"
+            @close="closeImportModal"
         />
     </ModernLayout>
 </template>

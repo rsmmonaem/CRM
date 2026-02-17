@@ -1,6 +1,6 @@
 <script setup>
 import { ref, watch } from 'vue';
-import { useForm } from '@inertiajs/vue3';
+import { useForm, router } from '@inertiajs/vue3';
 
 const props = defineProps({
     lead: Object,
@@ -38,12 +38,13 @@ watch(() => props.lead, (newLead) => {
 
 const submitLead = () => {
     form.put(route('leads.update', props.lead.id), {
+        preserveScroll: true,
         onSuccess: () => {
             emit('close');
             form.reset();
         },
         onError: (errors) => {
-            // Handle errors silently
+            console.error('Validation errors:', errors);
         }
     });
 };

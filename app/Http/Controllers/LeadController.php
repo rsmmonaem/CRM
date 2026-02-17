@@ -79,13 +79,18 @@ class LeadController extends Controller
         }
 
         // Check for duplicates
-        $duplicateQuery = Lead::query();
-        if ($request->phone) {
-            $duplicateQuery->orWhere('phone', $request->phone);
-        }
-        if ($request->email) {
-            $duplicateQuery->orWhere('email', $request->email);
-        }
+        $duplicateQuery = Lead::where(function($query) use ($request) {
+            if ($request->phone) {
+                $query->where('phone', $request->phone);
+            }
+            if ($request->email) {
+                if ($request->phone) {
+                    $query->orWhere('email', $request->email);
+                } else {
+                    $query->where('email', $request->email);
+                }
+            }
+        });
 
         if ($duplicateQuery->exists()) {
             return back()->withErrors(['duplicate' => 'A lead with this phone or email already exists.'])->withInput();
@@ -166,6 +171,7 @@ class LeadController extends Controller
         $request->validate([
             'name' => 'nullable|string|max:255',
             'company_name' => 'nullable|string|max:255',
+            'location' => 'nullable|string|max:255',
             'phone' => 'nullable|string|max:20',
             'email' => 'nullable|email|max:255',
             'service_id' => 'required|exists:services,id',
@@ -179,21 +185,36 @@ class LeadController extends Controller
         }
 
         // Check for duplicates (excluding current lead)
-        $duplicateQuery = Lead::where('id', '!=', $lead->id);
-        if ($request->phone) {
-            $duplicateQuery->orWhere('phone', $request->phone);
-        }
-        if ($request->email) {
-            $duplicateQuery->orWhere('email', $request->email);
-        }
+        $duplicateQuery = Lead::where('id', '!=', $lead->id)
+            ->where(function($query) use ($request) {
+                if ($request->phone) {
+                    $query->where('phone', $request->phone);
+                }
+                if ($request->email) {
+                    if ($request->phone) {
+                        $query->orWhere('email', $request->email);
+                    } else {
+                        $query->where('email', $request->email);
+                    }
+                }
+            });
 
         if ($duplicateQuery->exists()) {
             return back()->withErrors(['duplicate' => 'A lead with this phone or email already exists.'])->withInput();
         }
 
-        $lead->update($request->all());
+        $lead->update([
+            'name' => $request->name,
+            'company_name' => $request->company_name,
+            'location' => $request->location,
+            'phone' => $request->phone,
+            'email' => $request->email,
+            'service_id' => $request->service_id,
+            'status_id' => $request->status_id,
+            'assigned_user_id' => $request->assigned_user_id,
+        ]);
 
-        return redirect()->route('leads.index')->with('success', 'Lead updated successfully!');
+        return back()->with('success', 'Lead updated successfully!');
     }
 
     /**
@@ -230,5 +251,74 @@ class LeadController extends Controller
         return response()->json([
             'lead_details' => $leadDetails
         ]);
+    }
+
+    /**
+     * Import leads from a CSV file.
+     */
+    public function import(Request $request)
+    {
+        $request->validate([
+            'file' => 'required|file|mimes:csv,txt',
+            'service_id' => 'required|exists:services,id',
+            'status_id' => 'required|exists:statuses,id',
+        ]);
+
+        $file = $request->file('file');
+        $handle = fopen($file->getRealPath(), 'r');
+        
+        // Skip header if it exists (check if first row has "phone" or non-numeric data)
+        $header = fgetcsv($handle);
+        
+        $importedCount = 0;
+        $skippedCount = 0;
+        $duplicateCount = 0;
+
+        while (($data = fgetcsv($handle)) !== FALSE) {
+            // Assume first column is phone if only one column, 
+            // otherwise try to find phone column or assume first is name, second is phone etc.
+            // For simplicity and based on "only phone number is required", 
+            // let's assume the CSV structure: Name, Company, Phone, Email
+            // or just Phone.
+            
+            $name = count($data) > 0 ? $data[0] : null;
+            $company = count($data) > 1 ? $data[1] : null;
+            $phone = count($data) > 2 ? $data[2] : (count($data) > 0 ? $data[0] : null);
+            $email = count($data) > 3 ? $data[3] : null;
+
+            // Clean phone: keep only digits
+            $phone = preg_replace('/[^0-9]/', '', $phone);
+
+            if (empty($phone)) {
+                $skippedCount++;
+                continue;
+            }
+
+            // Check for duplicates
+            if (Lead::where('phone', $phone)->exists()) {
+                $duplicateCount++;
+                continue;
+            }
+
+            try {
+                Lead::create([
+                    'name' => $name ?: 'Imported Lead',
+                    'company_name' => $company,
+                    'phone' => $phone,
+                    'email' => $email,
+                    'service_id' => $request->service_id,
+                    'status_id' => $request->status_id,
+                    'assigned_user_id' => auth()->id(),
+                    'created_by' => auth()->id(),
+                ]);
+                $importedCount++;
+            } catch (\Exception $e) {
+                $skippedCount++;
+            }
+        }
+
+        fclose($handle);
+
+        return redirect()->route('leads.index')->with('success', "Import completed: {$importedCount} leads imported, {$duplicateCount} duplicates skipped, {$skippedCount} invalid rows skipped.");
     }
 }
