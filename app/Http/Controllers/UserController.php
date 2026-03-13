@@ -87,7 +87,7 @@ class UserController extends Controller
         $currentUser = auth()->user();
 
         // Handle user information update
-        if ($request->has('name') || $request->has('email') || $request->has('role') || $request->has('password')) {
+        if ($request->has('name') || $request->has('email') || $request->has('role') || $request->filled('password')) {
             $validationRules = [];
             
             if ($request->has('name')) {
@@ -106,11 +106,13 @@ class UserController extends Controller
                 $validationRules['role'] = 'required|in:admin,user';
             }
             
-            if ($request->has('password')) {
+            if ($request->filled('password')) {
                 $validationRules['password'] = 'required|string|min:8|confirmed';
             }
 
-            $request->validate($validationRules);
+            if (!empty($validationRules)) {
+                $request->validate($validationRules);
+            }
 
             $updateData = [];
             
@@ -126,8 +128,8 @@ class UserController extends Controller
                 $updateData['role'] = $request->role;
             }
             
-            if ($request->has('password')) {
-                $updateData['password'] = bcrypt($request->password);
+            if ($request->filled('password')) {
+                $updateData['password'] = $request->password; // Eloquent will hash it because of 'hashed' cast in model
             }
 
             if (!empty($updateData)) {
@@ -137,6 +139,11 @@ class UserController extends Controller
 
         // Handle permissions update
         if ($request->has('permissions')) {
+            // Only admins can manage permissions
+            if (!$currentUser->isAdmin()) {
+                abort(403, 'Only administrators can manage user permissions.');
+            }
+
             $request->validate([
                 'permissions' => 'array',
                 'permissions.*' => 'exists:permissions,id',

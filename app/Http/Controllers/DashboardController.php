@@ -132,6 +132,7 @@ class DashboardController extends Controller
             'user' => $user,
             'services' => $services,
             'statuses' => $statuses,
+            'call_statuses' => Status::where('type', 'call')->get(),
             'modalUsers' => $modalUsers,
         ]);
     }
@@ -233,6 +234,7 @@ class DashboardController extends Controller
             'selectedUser' => $selectedUser,
             'services' => $services,
             'statuses' => $statuses,
+            'call_statuses' => Status::where('type', 'call')->get(),
             'modalUsers' => $modalUsers,
         ]);
     }

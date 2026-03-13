@@ -1,15 +1,37 @@
 <script setup>
 import ModernLayout from '@/Layouts/ModernLayout.vue';
 import { Head, Link, router } from '@inertiajs/vue3';
+import Swal from 'sweetalert2';
 
 const props = defineProps({
     statuses: Array,
 });
 
 const deleteStatus = (status) => {
-    if (confirm('Are you sure you want to delete this status?')) {
-        router.delete(route('statuses.destroy', status.id));
-    }
+    Swal.fire({
+        title: 'Delete Status',
+        text: `Are you sure you want to delete the status "${status.name}"?`,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#EF4444',
+        cancelButtonColor: '#6B7280',
+        confirmButtonText: 'Yes, delete',
+        cancelButtonText: 'Cancel'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            router.delete(route('statuses.destroy', status.id), {
+                onSuccess: () => {
+                    Swal.fire({
+                        title: 'Deleted!',
+                        text: 'Status has been deleted.',
+                        icon: 'success',
+                        timer: 1500,
+                        showConfirmButton: false
+                    });
+                }
+            });
+        }
+    });
 };
 </script>
 
@@ -78,6 +100,7 @@ const deleteStatus = (status) => {
                         <thead class="bg-gray-50 dark:bg-gray-700">
                             <tr>
                                 <th class="px-6 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Name</th>
+                                <th class="px-6 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Type</th>
                                 <th class="px-6 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Created By</th>
                                 <th class="px-6 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Created At</th>
                                 <th class="px-6 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Actions</th>
@@ -88,8 +111,16 @@ const deleteStatus = (status) => {
                                 <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
                                     {{ status.name }}
                                 </td>
+                                <td class="px-6 py-4 whitespace-nowrap">
+                                    <span :class="[
+                                        'px-2 py-1 text-[10px] font-bold rounded-full uppercase tracking-wider',
+                                        status.type === 'call' ? 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200' : 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200'
+                                    ]">
+                                        {{ status.type || 'Lead' }}
+                                    </span>
+                                </td>
                                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                                    {{ status.creator.name }}
+                                    {{ status.creator?.name || 'Staff' }}
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
                                     {{ new Date(status.created_at).toLocaleDateString() }}

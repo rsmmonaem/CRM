@@ -5,6 +5,8 @@ namespace App\Http\Controllers;
 use App\Models\LeadDetail;
 use App\Models\Lead;
 use App\Models\User;
+use App\Models\Service;
+use App\Models\Status;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 
@@ -17,7 +19,7 @@ class CallLogController extends Controller
     {
         $user = auth()->user();
 
-        // Get call logs with pagination
+        // Get all call logs for client-side filtering (consistent with Leads/Index)
         $callLogsQuery = LeadDetail::with(['lead.service', 'lead.status', 'lead.assignedUser', 'creator'])
             ->orderBy('created_at', 'desc');
 
@@ -28,11 +30,15 @@ class CallLogController extends Controller
             });
         }
 
-        $callLogs = $callLogsQuery->paginate(12);
+        $callLogs = $callLogsQuery->get();
 
         return Inertia::render('CallLog/Index', [
             'callLogs' => $callLogs,
             'user' => $user,
+            'services' => Service::all(),
+            'statuses' => Status::where('type', 'lead')->get(),
+            'call_statuses' => Status::where('type', 'call')->get(),
+            'users' => User::all(),
         ]);
     }
 }

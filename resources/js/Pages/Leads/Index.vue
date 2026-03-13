@@ -7,12 +7,14 @@ import NewLeadModal from '@/Components/NewLeadModal.vue';
 import EditLeadModal from '@/Components/EditLeadModal.vue';
 import LeadShowModal from '@/Components/LeadShowModal.vue';
 import ImportLeadModal from '@/Components/ImportLeadModal.vue';
+import Swal from 'sweetalert2';
 
 const props = defineProps({
     leads: Array,
     user: Object,
     services: Array,
     statuses: Array,
+    call_statuses: Array,
     users: Array,
 });
 
@@ -29,8 +31,64 @@ const callButtonClicked = ref(new Set());
 const viewButtonClicked = ref(new Set());
 const editButtonClicked = ref(new Set());
 
+// Selection state
+const selectedIds = ref([]);
+const selectAll = ref(false);
+
+const toggleSelectAll = () => {
+    if (selectAll.value) {
+        selectedIds.value = filteredLeads.value.map(lead => lead.id);
+    } else {
+        selectedIds.value = [];
+    }
+};
+
+const handleSelect = () => {
+    if (selectedIds.value.length === filteredLeads.value.length) {
+        selectAll.value = true;
+    } else {
+        selectAll.value = false;
+    }
+};
+
+const deleteBulk = () => {
+    if (selectedIds.value.length === 0) return;
+
+    Swal.fire({
+        title: 'Bulk Delete Leads',
+        text: `Are you sure you want to delete ${selectedIds.value.length} selected leads? This action cannot be undone!`,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#EF4444',
+        cancelButtonColor: '#6B7280',
+        confirmButtonText: 'Yes, delete all',
+        cancelButtonText: 'Cancel',
+        background: page.props.auth.user?.dark_mode ? '#1F2937' : '#FFFFFF',
+        color: page.props.auth.user?.dark_mode ? '#FFFFFF' : '#111827',
+    }).then((result) => {
+        if (result.isConfirmed) {
+            router.post(route('leads.bulk-destroy'), {
+                ids: selectedIds.value
+            }, {
+                onSuccess: () => {
+                    selectedIds.value = [];
+                    selectAll.value = false;
+                    Swal.fire({
+                        title: 'Deleted!',
+                        text: 'Selected leads have been removed.',
+                        icon: 'success',
+                        timer: 2000,
+                        showConfirmButton: false
+                    });
+                }
+            });
+        }
+    });
+};
+
 // Filter state
 const filters = ref({
+    search: '',
     service: '',
     status: '',
     dateFrom: '',
@@ -48,6 +106,17 @@ const hasPermission = (module, action) => {
 // Computed filtered leads
 const filteredLeads = computed(() => {
     let result = [...props.leads];
+
+    // Search filter
+    if (filters.value.search) {
+        const search = filters.value.search.toLowerCase();
+        result = result.filter(lead => 
+            lead.name?.toLowerCase().includes(search) ||
+            lead.phone?.toLowerCase().includes(search) ||
+            lead.email?.toLowerCase().includes(search) ||
+            lead.company_name?.toLowerCase().includes(search)
+        );
+    }
 
     // Service filter
     if (filters.value.service) {
@@ -81,7 +150,8 @@ const filteredLeads = computed(() => {
 
 // Check if any filters are active
 const hasActiveFilters = computed(() => {
-    return filters.value.service ||
+    return filters.value.search ||
+           filters.value.service ||
            filters.value.status ||
            filters.value.dateFrom ||
            filters.value.dateTo ||
@@ -91,6 +161,7 @@ const hasActiveFilters = computed(() => {
 // Clear all filters
 const clearFilters = () => {
     filters.value = {
+        search: '',
         service: '',
         status: '',
         dateFrom: '',
@@ -184,9 +255,32 @@ const closeEditModal = () => {
 };
 
 const deleteLead = (lead) => {
-    if (confirm('Are you sure you want to delete this lead?')) {
-        router.delete(route('leads.destroy', lead.id));
-    }
+    Swal.fire({
+        title: 'Delete Lead',
+        text: `Are you sure you want to delete "${lead.name || 'this lead'}"?`,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#EF4444',
+        cancelButtonColor: '#6B7280',
+        confirmButtonText: 'Yes, delete',
+        cancelButtonText: 'Cancel',
+        background: page.props.auth.user?.dark_mode ? '#1F2937' : '#FFFFFF',
+        color: page.props.auth.user?.dark_mode ? '#FFFFFF' : '#111827',
+    }).then((result) => {
+        if (result.isConfirmed) {
+            router.delete(route('leads.destroy', lead.id), {
+                onSuccess: () => {
+                    Swal.fire({
+                        title: 'Deleted!',
+                        text: 'Lead has been deleted.',
+                        icon: 'success',
+                        timer: 1500,
+                        showConfirmButton: false
+                    });
+                }
+            });
+        }
+    });
 };
 
 // New Lead Modal handlers
@@ -249,6 +343,14 @@ const getStatusClass = (statusName) => {
     }
 
     return 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200';
+};
+
+const viewMode = ref(props.user?.default_view_mode || 'grid'); // Initialize from DB
+
+const saveDefaultView = (mode) => {
+    router.patch(route('profile.preference.update'), {
+        default_view_mode: mode
+    });
 };
 </script>
 
@@ -318,7 +420,27 @@ const getStatusClass = (statusName) => {
             </div>
 
             <!-- Filter Grid -->
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
+                <!-- Search Filter -->
+                <div class="xl:col-span-2">
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        Search Leads
+                    </label>
+                    <div class="relative">
+                        <span class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                            </svg>
+                        </span>
+                        <input
+                            type="text"
+                            v-model="filters.search"
+                            placeholder="Search name, phone, email..."
+                            class="w-full pl-10 border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg shadow-sm focus:ring-indigo-500 focus:border-indigo-500 text-sm h-10"
+                        />
+                    </div>
+                </div>
+
                 <!-- Service Filter -->
                 <div>
                     <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
@@ -326,7 +448,7 @@ const getStatusClass = (statusName) => {
                     </label>
                     <select
                         v-model="filters.service"
-                        class="w-full border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg shadow-sm focus:ring-indigo-500 focus:border-indigo-500 text-sm"
+                        class="w-full border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg shadow-sm focus:ring-indigo-500 focus:border-indigo-500 text-sm h-10"
                     >
                         <option value="">All Services ({{ leads.length }})</option>
                         <option v-for="service in services" :key="service.id" :value="service.id">
@@ -342,7 +464,7 @@ const getStatusClass = (statusName) => {
                     </label>
                     <select
                         v-model="filters.status"
-                        class="w-full border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg shadow-sm focus:ring-indigo-500 focus:border-indigo-500 text-sm"
+                        class="w-full border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg shadow-sm focus:ring-indigo-500 focus:border-indigo-500 text-sm h-10"
                     >
                         <option value="">All Statuses ({{ leads.length }})</option>
                         <option v-for="status in statuses" :key="status.id" :value="status.id">
@@ -359,7 +481,7 @@ const getStatusClass = (statusName) => {
                     <input
                         type="date"
                         v-model="filters.dateFrom"
-                        class="w-full border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg shadow-sm focus:ring-indigo-500 focus:border-indigo-500 text-sm"
+                        class="w-full border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg shadow-sm focus:ring-indigo-500 focus:border-indigo-500 text-sm h-10"
                     />
                 </div>
 
@@ -371,7 +493,7 @@ const getStatusClass = (statusName) => {
                     <input
                         type="date"
                         v-model="filters.dateTo"
-                        class="w-full border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg shadow-sm focus:ring-indigo-500 focus:border-indigo-500 text-sm"
+                        class="w-full border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg shadow-sm focus:ring-indigo-500 focus:border-indigo-500 text-sm h-10"
                     />
                 </div>
 
@@ -423,6 +545,14 @@ const getStatusClass = (statusName) => {
             <div v-if="hasActiveFilters" class="mt-4 pt-4 border-t border-gray-200 dark:border-gray-600">
                 <div class="flex flex-wrap gap-2">
                     <span class="text-sm text-gray-600 dark:text-gray-400 font-medium">Active filters:</span>
+                    <span v-if="filters.search" class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200 border border-gray-200 dark:border-gray-600">
+                        Search: "{{ filters.search }}"
+                        <button @click="filters.search = ''" class="ml-1 text-gray-400 hover:text-gray-600">
+                            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                        </button>
+                    </span>
                     <span v-if="filters.service" class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
                         Service: {{ services.find(s => s.id == filters.service)?.name }}
                         <button @click="filters.service = ''" class="ml-1 text-blue-600 hover:text-blue-800">
@@ -476,9 +606,71 @@ const getStatusClass = (statusName) => {
                     </svg>
                     <span>{{ hasActiveFilters ? 'Filtered Leads' : 'All Leads' }}</span>
                 </h3>
-                <span class="text-sm bg-blue-100 text-blue-700 px-3 py-1 rounded-full">
-                    {{ hasActiveFilters ? `${filteredLeads.length} of ${leads.length}` : `${leads.length} total` }}
-                </span>
+                <div class="flex items-center space-x-3">
+                    <div class="flex items-center bg-gray-100 dark:bg-gray-700 p-1 rounded-lg">
+                        <button
+                            @click="viewMode = 'grid'"
+                            :class="[
+                                'p-2 rounded-md transition-all',
+                                viewMode === 'grid' ? 'bg-white dark:bg-gray-600 shadow-sm text-blue-600 dark:text-blue-400' : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
+                            ]"
+                            title="Grid View"
+                        >
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
+                            </svg>
+                        </button>
+                        <button
+                            @click="viewMode = 'table'"
+                            :class="[
+                                'p-2 rounded-md transition-all',
+                                viewMode === 'table' ? 'bg-white dark:bg-gray-600 shadow-sm text-blue-600 dark:text-blue-400' : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
+                            ]"
+                            title="Table View"
+                        >
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M3 14h18m-9-4v8m-7 0h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                            </svg>
+                        </button>
+                    </div>
+
+                    <button 
+                        @click="saveDefaultView(viewMode)"
+                        class="p-2 text-gray-400 hover:text-blue-500 dark:hover:text-blue-400 transition-colors"
+                        title="Set current view as default"
+                    >
+                        <svg class="w-5 h-5" :class="{'text-blue-500 fill-current': props.user?.default_view_mode === viewMode}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
+                        </svg>
+                    </button>
+                    <span class="text-sm bg-blue-100 text-blue-700 px-3 py-1 rounded-full">
+                        {{ hasActiveFilters ? `${filteredLeads.length} of ${leads.length}` : `${leads.length} total` }}
+                    </span>
+                </div>
+            </div>
+
+            <!-- Bulk Actions Bar -->
+            <div v-if="selectedIds.length > 0" class="mb-6 flex items-center justify-between p-4 bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800 rounded-xl animate-fade-in-down">
+                <div class="flex items-center space-x-4">
+                    <span class="text-sm font-medium text-blue-800 dark:text-blue-300">
+                        {{ selectedIds.length }} items selected
+                    </span>
+                    <button
+                        @click="deleteBulk"
+                        class="px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-sm font-semibold rounded-lg shadow-sm transition-colors flex items-center space-x-2"
+                    >
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                        </svg>
+                        <span>Delete Selected</span>
+                    </button>
+                </div>
+                <button
+                    @click="selectedIds = []; selectAll = false"
+                    class="text-sm font-medium text-blue-600 dark:text-blue-400 hover:underline"
+                >
+                    Deselect All
+                </button>
             </div>
 
             <!-- Empty State -->
@@ -509,54 +701,133 @@ const getStatusClass = (statusName) => {
                 </div>
             </div>
 
-            <!-- Lead Cards -->
-            <div class="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-  <div v-for="lead in filteredLeads" :key="lead.id" class="bg-white dark:bg-gray-800 rounded-xl shadow-md hover:shadow-xl dark:hover:shadow-white/20 border border-gray-200 dark:border-gray-600 hover:border-gray-300 dark:hover:border-white/30 transition-all duration-300 p-4 flex flex-col justify-between">
+            <!-- Lead View Wrapper -->
+            <div v-if="filteredLeads.length > 0">
+                <!-- Grid View -->
+                <div v-if="viewMode === 'grid'" class="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+                    <div v-for="lead in filteredLeads" :key="lead.id" class="relative bg-white dark:bg-gray-800 rounded-xl shadow-md hover:shadow-xl dark:hover:shadow-white/20 border border-gray-200 dark:border-gray-600 hover:border-gray-300 dark:hover:border-white/30 transition-all duration-300 p-4 flex flex-col justify-between">
+                        <!-- Selection Checkbox -->
+                        <div class="absolute top-4 right-4 z-10">
+                            <input
+                                type="checkbox"
+                                :value="lead.id"
+                                v-model="selectedIds"
+                                @change="handleSelect"
+                                class="w-5 h-5 text-blue-600 border-gray-300 rounded focus:ring-blue-500 bg-white dark:bg-gray-700 dark:border-gray-600"
+                            />
+                        </div>
 
-    <!-- Header: Name + Status -->
-    <div class="flex justify-between items-start mb-2">
-      <h4 class="text-lg font-semibold text-gray-800 dark:text-white truncate">
-        {{ lead.name || 'Unnamed Lead' }}
-      </h4>
-      <span class="text-xs font-semibold px-2 py-1 rounded-full" :class="getStatusClass(lead.status.name)">
-        {{ lead.status.name }}
-      </span>
-    </div>
+                        <!-- Header: Name + Status -->
+                        <div class="flex justify-between items-start mb-2">
+                            <h4 class="text-lg font-semibold text-gray-800 dark:text-white truncate">
+                                {{ lead.name || 'Unnamed Lead' }}
+                            </h4>
+                            <span class="text-xs font-semibold px-2 py-1 rounded-full" :class="getStatusClass(lead.status.name)">
+                                {{ lead.status.name }}
+                            </span>
+                        </div>
 
-    <!-- Info Grid -->
-    <div class="grid grid-cols-2 gap-2 text-xs text-gray-600 dark:text-gray-300 mb-2">
-      <div class="truncate"><strong>Phone:</strong> {{ lead.phone || '-' }}</div>
-      <div class="truncate"><strong>Email:</strong> {{ lead.email || '-' }}</div>
-      <div class="truncate"><strong>Company:</strong> {{ lead.company_name || '-' }}</div>
-      <div class="truncate"><strong>Service:</strong> {{ lead.service.name || '-' }}</div>
-      <div class="truncate"><strong>Assigned:</strong> {{ lead.assigned_user.name || '-' }}</div>
-      <div class="truncate"><strong>Created:</strong> {{ new Date(lead.created_at).toLocaleDateString() }}</div>
-    </div>
+                        <!-- Info Grid -->
+                        <div class="grid grid-cols-2 gap-2 text-xs text-gray-600 dark:text-gray-300 mb-2">
+                            <div class="truncate"><strong>Phone:</strong> {{ lead.phone || '-' }}</div>
+                            <div class="truncate"><strong>Email:</strong> {{ lead.email || '-' }}</div>
+                            <div class="truncate"><strong>Company:</strong> {{ lead.company_name || '-' }}</div>
+                            <div class="truncate"><strong>Service:</strong> {{ lead.service.name || '-' }}</div>
+                            <div class="truncate"><strong>Assigned:</strong> {{ lead.assigned_user.name || '-' }}</div>
+                            <div class="truncate"><strong>Created:</strong> {{ new Date(lead.created_at).toLocaleDateString() }}</div>
+                        </div>
 
-    <!-- Last Call History (Left-Right) -->
-    <div v-if="lead.lead_details.length > 0" class="mt-2 p-2 bg-gray-50 dark:bg-gray-700 rounded border border-gray-200 dark:border-gray-600 text-xs text-gray-500 dark:text-gray-300">
-      <div class="mb-1 font-semibold text-gray-700 dark:text-gray-200">Last Call</div>
-      <div v-for="(call, index) in lead.lead_details.slice(0, 1)" :key="call.id" class="flex justify-between items-start gap-2">
-        <div class="flex-shrink-0 text-gray-500 dark:text-gray-400">
-          {{ new Date(call.created_at).toLocaleDateString() }}
-        </div>
-        <div class="flex-1 text-gray-700 dark:text-gray-200 truncate">
-          {{ call.call_followup_summary || '-' }}
-        </div>
-      </div>
-      <div v-if="lead.lead_details.length > 1" class="text-right text-gray-400 dark:text-gray-500 text-xs">+{{ lead.lead_details.length - 1 }} more</div>
-    </div>
+                        <!-- Last Call History -->
+                        <div v-if="lead.lead_details.length > 0" class="mt-2 p-2 bg-gray-50 dark:bg-gray-700 rounded border border-gray-200 dark:border-gray-600 text-xs text-gray-500 dark:text-gray-300">
+                            <div class="mb-1 font-semibold text-gray-700 dark:text-gray-200">Last Call</div>
+                            <div v-for="(call, index) in lead.lead_details.slice(0, 1)" :key="call.id" class="flex justify-between items-start gap-2">
+                                <div class="flex-shrink-0 text-gray-500 dark:text-gray-400">
+                                    {{ new Date(call.created_at).toLocaleDateString() }}
+                                </div>
+                                <div class="flex-1 text-gray-700 dark:text-gray-200 truncate">
+                                    {{ call.call_followup_summary || '-' }}
+                                </div>
+                            </div>
+                        </div>
 
-    <!-- Action Buttons -->
-    <div class="mt-3 flex flex-wrap gap-2">
-      <button @click="openCallModal(lead)" class="flex-1 bg-blue-500 hover:bg-blue-600 dark:hover:bg-blue-400 text-white font-semibold py-2 px-2 rounded text-xs transition-all duration-200 hover:scale-105 hover:shadow-lg">Call</button>
-      <button @click="openLeadModal(lead)" class="flex-1 bg-green-500 hover:bg-green-600 dark:hover:bg-green-400 text-white font-semibold py-2 px-2 rounded text-xs text-center transition-all duration-200 hover:scale-105 hover:shadow-lg">View</button>
-      <button @click="openEditModal(lead)" class="flex-1 bg-yellow-500 hover:bg-yellow-600 dark:hover:bg-yellow-400 text-white font-semibold py-2 px-2 rounded text-xs transition-all duration-200 hover:scale-105 hover:shadow-lg">Edit</button>
-      <button @click="deleteLead(lead)" class="flex-1 bg-red-500 hover:bg-red-600 dark:hover:bg-red-400 text-white font-semibold py-2 px-2 rounded text-xs transition-all duration-200 hover:scale-105 hover:shadow-lg">Delete</button>
-    </div>
+                        <!-- Action Buttons -->
+                        <div class="mt-3 flex flex-wrap gap-2">
+                            <button @click="openCallModal(lead)" class="flex-1 bg-blue-500 hover:bg-blue-600 dark:hover:bg-blue-400 text-white font-semibold py-2 px-2 rounded text-xs transition-all duration-200 hover:scale-105 hover:shadow-lg">Call</button>
+                            <button @click="openLeadModal(lead)" class="flex-1 bg-green-500 hover:bg-green-600 dark:hover:bg-green-400 text-white font-semibold py-2 px-2 rounded text-xs text-center transition-all duration-200 hover:scale-105 hover:shadow-lg">View</button>
+                            <button @click="openEditModal(lead)" class="flex-1 bg-yellow-500 hover:bg-yellow-600 dark:hover:bg-yellow-400 text-white font-semibold py-2 px-2 rounded text-xs transition-all duration-200 hover:scale-105 hover:shadow-lg">Edit</button>
+                            <button @click="deleteLead(lead)" class="flex-1 bg-red-500 hover:bg-red-600 dark:hover:bg-red-400 text-white font-semibold py-2 px-2 rounded text-xs transition-all duration-200 hover:scale-105 hover:shadow-lg">Delete</button>
+                        </div>
+                    </div>
+                </div>
 
-  </div>
-</div>
+                <!-- Table View -->
+                <div v-else class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden">
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                            <thead class="bg-gray-50 dark:bg-gray-900">
+                                <tr>
+                                     <th class="px-6 py-3 text-left">
+                                         <input
+                                             type="checkbox"
+                                             v-model="selectAll"
+                                             @change="toggleSelectAll"
+                                             class="w-5 h-5 text-blue-600 border-gray-300 rounded focus:ring-blue-500 bg-white dark:bg-gray-700 dark:border-gray-600"
+                                         />
+                                     </th>
+                                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[140px]">Lead</th>
+                                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[140px]">Contact</th>
+                                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[120px]">Service</th>
+                                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[100px]">Status</th>
+                                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[120px]">Assigned</th>
+                                     <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[120px]">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody class="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                                <tr v-for="lead in filteredLeads" :key="lead.id" class="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors" :class="{ 'bg-blue-50/50 dark:bg-blue-900/10': selectedIds.includes(lead.id) }">
+                                    <td class="px-6 py-4">
+                                        <input
+                                            type="checkbox"
+                                            :value="lead.id"
+                                            v-model="selectedIds"
+                                            @change="handleSelect"
+                                            class="w-5 h-5 text-blue-600 border-gray-300 rounded focus:ring-blue-500 bg-white dark:bg-gray-700 dark:border-gray-600"
+                                        />
+                                    </td>
+                                    <td class="px-6 py-4  ">
+                                        <div class="flex items-center">
+                                            <div>
+                                                <div class="text-sm font-semibold text-gray-900 dark:text-white">{{ lead.name }}</div>
+                                                <div class="text-xs text-gray-500 dark:text-gray-400">{{ lead.company_name || 'No Company' }}</div>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td class="px-6 py-4  ">
+                                        <div class="text-sm text-gray-900 dark:text-white">{{ lead.phone }}</div>
+                                        <div class="text-xs text-gray-500 dark:text-gray-400">{{ lead.email }}</div>
+                                    </td>
+                                    <td class="px-6 py-4  ">
+                                        <span class="text-sm text-gray-900 dark:text-white">{{ lead.service.name }}</span>
+                                    </td>
+                                    <td class="px-6 py-4  ">
+                                        <span class="px-2.5 py-1 text-[10px] font-bold rounded-full uppercase tracking-wider" :class="getStatusClass(lead.status.name)">
+                                            {{ lead.status.name }}
+                                        </span>
+                                    </td>
+                                    <td class="px-6 py-4   text-sm text-gray-500 dark:text-gray-400">
+                                        {{ lead.assigned_user.name }}
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium space-x-2">
+                                        <button @click="openCallModal(lead)" class="text-blue-600 hover:text-blue-900 dark:text-blue-400 dark:hover:text-blue-300">Call</button>
+                                        <button @click="openLeadModal(lead)" class="text-green-600 hover:text-green-900 dark:text-green-400 dark:hover:text-green-300">View</button>
+                                        <button @click="openEditModal(lead)" class="text-yellow-600 hover:text-yellow-900 dark:text-yellow-400 dark:hover:text-yellow-300">Edit</button>
+                                        <button @click="deleteLead(lead)" class="text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-300">Delete</button>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
 
         </div>
 
@@ -565,6 +836,7 @@ const getStatusClass = (statusName) => {
             v-if="showCallModal"
             :lead="selectedLead"
             :statuses="statuses"
+            :call-statuses="call_statuses"
             @close="closeCallModal"
         />
 
@@ -595,6 +867,7 @@ const getStatusClass = (statusName) => {
             :lead="selectedLeadForShow"
             :services="services"
             :statuses="statuses"
+            :call-statuses="call_statuses"
             :users="users"
             :user="user"
             @close="closeLeadModal"
@@ -606,6 +879,7 @@ const getStatusClass = (statusName) => {
             :show="showImportModal"
             :services="services"
             :statuses="statuses"
+            :users="users"
             @close="closeImportModal"
         />
     </ModernLayout>

@@ -1,15 +1,37 @@
 <script setup>
 import ModernLayout from '@/Layouts/ModernLayout.vue';
 import { Head, Link, router } from '@inertiajs/vue3';
+import Swal from 'sweetalert2';
 
 const props = defineProps({
     services: Array,
 });
 
 const deleteService = (service) => {
-    if (confirm('Are you sure you want to delete this service?')) {
-        router.delete(route('services.destroy', service.id));
-    }
+    Swal.fire({
+        title: 'Delete Service',
+        text: `Are you sure you want to delete the service "${service.name}"?`,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#EF4444',
+        cancelButtonColor: '#6B7280',
+        confirmButtonText: 'Yes, delete',
+        cancelButtonText: 'Cancel'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            router.delete(route('services.destroy', service.id), {
+                onSuccess: () => {
+                    Swal.fire({
+                        title: 'Deleted!',
+                        text: 'Service has been deleted.',
+                        icon: 'success',
+                        timer: 1500,
+                        showConfirmButton: false
+                    });
+                }
+            });
+        }
+    });
 };
 </script>
 

@@ -1,6 +1,7 @@
 <script setup>
 import ModernLayout from '@/Layouts/ModernLayout.vue';
 import { Head, Link, router } from '@inertiajs/vue3';
+import Swal from 'sweetalert2';
 
 const props = defineProps({
     users: Array,
@@ -8,13 +9,30 @@ const props = defineProps({
 });
 
 const deleteUser = (userId) => {
-    if (confirm('Are you sure you want to delete this user?')) {
-        router.delete(route('users.destroy', userId), {
-            onSuccess: () => {
-                router.reload({ only: ['users'] });
-            },
-        });
-    }
+    Swal.fire({
+        title: 'Delete User',
+        text: 'Are you sure you want to delete this user? This action cannot be undone.',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#EF4444',
+        cancelButtonColor: '#6B7280',
+        confirmButtonText: 'Yes, delete',
+        cancelButtonText: 'Cancel'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            router.delete(route('users.destroy', userId), {
+                onSuccess: () => {
+                    Swal.fire({
+                        title: 'Deleted!',
+                        text: 'User has been deleted.',
+                        icon: 'success',
+                        timer: 1500,
+                        showConfirmButton: false
+                    });
+                },
+            });
+        }
+    });
 };
 </script>
 

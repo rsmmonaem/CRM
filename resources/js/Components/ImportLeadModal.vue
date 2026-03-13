@@ -1,6 +1,6 @@
 <script setup>
-import { ref, watch } from 'vue';
-import { useForm } from '@inertiajs/vue3';
+import { ref, watch, computed } from 'vue';
+import { useForm, usePage } from '@inertiajs/vue3';
 
 const props = defineProps({
     show: {
@@ -9,7 +9,12 @@ const props = defineProps({
     },
     services: Array,
     statuses: Array,
+    users: Array,
 });
+
+const page = usePage();
+const user = computed(() => page.props.auth.user);
+const isAdmin = computed(() => user.value?.is_admin || false);
 
 const emit = defineEmits(['close']);
 
@@ -17,6 +22,7 @@ const form = useForm({
     file: null,
     service_id: '',
     status_id: '',
+    assigned_user_id: '',
 });
 
 const fileInput = ref(null);
@@ -41,6 +47,7 @@ const resetForm = () => {
     form.file = null;
     form.service_id = '';
     form.status_id = '';
+    form.assigned_user_id = '';
     if (fileInput.value) fileInput.value.value = '';
     form.clearErrors();
 };
@@ -159,6 +166,26 @@ watch(() => props.show, (newValue) => {
                                         {{ status.name }}
                                     </option>
                                 </select>
+                            </div>
+
+                            <!-- Assign to User (Admin Only) -->
+                            <div v-if="isAdmin" class="md:col-span-2">
+                                <label for="import_assigned_user_id" class="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                                    Assign Imported Leads to User
+                                </label>
+                                <select
+                                    id="import_assigned_user_id"
+                                    v-model="form.assigned_user_id"
+                                    class="mt-1 block w-full border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                                >
+                                    <option value="">Myself ({{ user?.name }})</option>
+                                    <option v-for="u in users.filter(usr => usr.id !== user?.id)" :key="u.id" :value="u.id">
+                                        {{ u.name }}
+                                    </option>
+                                </select>
+                                <p class="mt-1 text-[10px] text-gray-500 dark:text-gray-400">
+                                    If left unselected, leads will be assigned to you.
+                                </p>
                             </div>
                         </div>
 

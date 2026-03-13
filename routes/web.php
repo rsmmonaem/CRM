@@ -9,6 +9,7 @@ use App\Http\Controllers\StatusController;
 use App\Http\Controllers\ServiceController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\SearchController;
+use App\Http\Controllers\ReportController;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
@@ -42,9 +43,11 @@ Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
+    Route::patch('/profile/preference', [ProfileController::class, 'updatePreference'])->name('profile.preference.update');
 
     // Lead routes with proper permission middleware
     Route::get('leads', [LeadController::class, 'index'])->name('leads.index')->middleware('permission:leads,view');
+    Route::post('leads/bulk-destroy', [LeadController::class, 'bulkDestroy'])->name('leads.bulk-destroy')->middleware('permission:leads,delete');
     Route::post('leads', [LeadController::class, 'store'])->name('leads.store')->middleware('permission:leads,create');
     Route::post('leads/import', [LeadController::class, 'import'])->name('leads.import')->middleware('permission:leads,create');
     Route::get('leads/{lead}', [LeadController::class, 'show'])->name('leads.show')->middleware('permission:leads,view');
@@ -58,6 +61,7 @@ Route::middleware('auth')->group(function () {
     // Lead detail routes
     Route::get('lead-details/{leadDetail}', [LeadDetailController::class, 'show'])->name('lead-details.show')->middleware('permission:leads,view');
     Route::get('lead-details/{leadDetail}/edit', [LeadDetailController::class, 'edit'])->name('lead-details.edit')->middleware('permission:leads,edit');
+    Route::post('lead-details/bulk-destroy', [LeadDetailController::class, 'bulkDestroy'])->name('lead-details.bulk-destroy')->middleware('permission:leads,delete');
     Route::post('lead-details', [LeadDetailController::class, 'store'])->name('lead-details.store')->middleware('permission:leads,create');
     Route::put('lead-details/{leadDetail}', [LeadDetailController::class, 'update'])->name('lead-details.update')->middleware('permission:leads,edit');
     Route::patch('lead-details/{leadDetail}/complete', [LeadDetailController::class, 'markAsCompleted'])->name('lead-details.complete')->middleware('permission:leads,edit');
@@ -99,6 +103,18 @@ Route::middleware('auth')->group(function () {
 
     // API route for lead details
     Route::get('api/leads/{lead}/details', [LeadController::class, 'getLeadDetails'])->name('api.leads.details');
+
+    // Report routes
+    Route::get('reports', [ReportController::class, 'index'])->name('reports.index'); // Accessible if user has any report permission (handled in view or controller)
+    
+    Route::get('reports/leads', [ReportController::class, 'leadReport'])->name('reports.leads')->middleware('permission:report_leads,view');
+    Route::get('reports/call-logs', [ReportController::class, 'callLogReport'])->name('reports.call-logs')->middleware('permission:report_call_logs,view');
+    Route::get('reports/user-summary', [ReportController::class, 'userSummaryReport'])->name('reports.user-summary')->middleware('permission:report_user_summary,view');
+    
+    // Print Routes
+    Route::get('reports/print/leads', [ReportController::class, 'leadReportPrint'])->name('reports.leads.print')->middleware('permission:report_leads,view');
+    Route::get('reports/print/call-logs', [ReportController::class, 'callLogReportPrint'])->name('reports.call-logs.print')->middleware('permission:report_call_logs,view');
+    Route::get('reports/print/user-summary', [ReportController::class, 'userSummaryReportPrint'])->name('reports.user-summary.print')->middleware('permission:report_user_summary,view');
 
     // Simple API route for lead details (no auth required for testing)
     Route::get('api/leads/{lead}/call-history', function($leadId) {

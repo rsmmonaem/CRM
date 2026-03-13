@@ -34,11 +34,13 @@ class StatusController extends Controller
     public function store(Request $request)
     {
         $request->validate([
-            'name' => 'required|string|max:255|unique:statuses,name',
+            'name' => 'required|string|max:255',
+            'type' => 'required|string|in:lead,call',
         ]);
         
         Status::create([
             'name' => $request->name,
+            'type' => $request->type,
             'created_by' => auth()->id(),
         ]);
         
@@ -73,11 +75,13 @@ class StatusController extends Controller
     public function update(Request $request, Status $status)
     {
         $request->validate([
-            'name' => 'required|string|max:255|unique:statuses,name,' . $status->id,
+            'name' => 'required|string|max:255',
+            'type' => 'required|string|in:lead,call',
         ]);
         
         $status->update([
             'name' => $request->name,
+            'type' => $request->type,
         ]);
         
         return redirect()->route('statuses.index')->with('success', 'Status updated successfully.');

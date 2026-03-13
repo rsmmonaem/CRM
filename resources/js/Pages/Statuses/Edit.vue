@@ -8,6 +8,7 @@ const props = defineProps({
 
 const form = useForm({
     name: props.status.name,
+    type: props.status.type || 'lead',
 });
 
 const submit = () => {
@@ -42,6 +43,24 @@ const submit = () => {
                         />
                         <div v-if="form.errors.name" class="mt-1 text-sm text-red-600">
                             {{ form.errors.name }}
+                        </div>
+                    </div>
+
+                    <div>
+                        <label for="type" class="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                            Status Type *
+                        </label>
+                        <select
+                            id="type"
+                            v-model="form.type"
+                            class="mt-1 block w-full border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                            required
+                        >
+                            <option value="lead">Lead Status (Sales Pipeline)</option>
+                            <option value="call">Call Status (Interaction Outcome)</option>
+                        </select>
+                        <div v-if="form.errors.type" class="mt-1 text-sm text-red-600">
+                            {{ form.errors.type }}
                         </div>
                     </div>
 

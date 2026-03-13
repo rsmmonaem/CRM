@@ -5,6 +5,7 @@ import { useForm } from '@inertiajs/vue3';
 const props = defineProps({
     callDetail: Object,
     lead: Object,
+    callStatuses: Array,
 });
 
 const emit = defineEmits(['close']);
@@ -12,6 +13,7 @@ const emit = defineEmits(['close']);
 const form = useForm({
     call_followup_date: new Date().toISOString().split('T')[0],
     call_followup_summary: '',
+    call_status: 'Connected',
     next_call_date: '',
 });
 
@@ -24,6 +26,8 @@ watch(() => props.callDetail, (newCallDetail) => {
             new Date().toISOString().split('T')[0];
 
         form.call_followup_summary = newCallDetail.call_followup_summary || '';
+
+        form.call_status = newCallDetail.call_status || 'Connected';
 
         form.next_call_date = newCallDetail.next_call_date ?
             newCallDetail.next_call_date.split('T')[0] : '';
@@ -81,20 +85,44 @@ const submitEdit = () => {
                                 <p class="text-sm text-red-800">⚠️ No call detail ID available. Please close and try again.</p>
                             </div>
 
-                            <div>
-                                <label for="edit_call_followup_date" class="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                                    Call Date *
-                                </label>
-                                <input
-                                    type="date"
-                                    id="edit_call_followup_date"
-                                    v-model="form.call_followup_date"
-                                    class="mt-1 block w-full border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
-                                    :class="{ 'border-red-500': form.errors.call_followup_date }"
-                                    required
-                                />
-                                <div v-if="form.errors.call_followup_date" class="mt-1 text-sm text-red-600">
-                                    {{ form.errors.call_followup_date }}
+                            <!-- Call Date and Status Row -->
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <!-- Call Date -->
+                                <div>
+                                    <label for="edit_call_followup_date" class="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                                        Call Date *
+                                    </label>
+                                    <input
+                                        type="date"
+                                        id="edit_call_followup_date"
+                                        v-model="form.call_followup_date"
+                                        class="mt-1 block w-full border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                                        :class="{ 'border-red-500': form.errors.call_followup_date }"
+                                        required
+                                    />
+                                    <div v-if="form.errors.call_followup_date" class="mt-1 text-sm text-red-600">
+                                        {{ form.errors.call_followup_date }}
+                                    </div>
+                                </div>
+
+                                <!-- Call Status -->
+                                <div>
+                                    <label for="edit_call_status" class="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                                        Call Status *
+                                    </label>
+                                    <select
+                                        id="edit_call_status"
+                                        v-model="form.call_status"
+                                        class="mt-1 block w-full border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                                        required
+                                    >
+                                        <option v-for="status in callStatuses" :key="status.id" :value="status.name">
+                                            {{ status.name }}
+                                        </option>
+                                    </select>
+                                    <div v-if="form.errors.call_status" class="mt-1 text-sm text-red-600">
+                                        {{ form.errors.call_status }}
+                                    </div>
                                 </div>
                             </div>
 

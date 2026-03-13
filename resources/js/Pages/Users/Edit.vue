@@ -115,10 +115,10 @@ const canManagePermissions = computed(() => !!currentUser.value.is_admin);
         </div>
 
         <!-- Flash Messages -->
-        <div v-if="page.props.flash.success" class="mb-6 bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded-lg">
+        <div v-if="page.props.flash?.success" class="mb-6 bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded-lg">
             {{ page.props.flash.success }}
         </div>
-        <div v-if="page.props.flash.error" class="mb-6 bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-lg">
+        <div v-if="page.props.flash?.error" class="mb-6 bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-lg">
             {{ page.props.flash.error }}
         </div>
 

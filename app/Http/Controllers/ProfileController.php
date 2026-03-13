@@ -41,6 +41,22 @@ class ProfileController extends Controller
     }
 
     /**
+     * Update user preference.
+     */
+    public function updatePreference(Request $request): RedirectResponse
+    {
+        $request->validate([
+            'default_view_mode' => 'required|string|in:grid,table',
+        ]);
+
+        auth()->user()->update([
+            'default_view_mode' => $request->default_view_mode
+        ]);
+
+        return back()->with('success', 'Default view updated!');
+    }
+
+    /**
      * Delete the user's account.
      */
     public function destroy(Request $request): RedirectResponse

@@ -14,6 +14,7 @@ class LeadDetail extends Model
         'lead_id',
         'call_followup_date',
         'call_followup_summary',
+        'call_status',
         'next_call_date',
         'called_at',
         'created_by',
@@ -82,11 +83,12 @@ class LeadDetail extends Model
     }
 
     /** 🔹 Mark call as completed */
-    public function markAsCalled($summary = null, $nextCallDate = null)
+    public function markAsCalled($summary = null, $nextCallDate = null, $status = null)
     {
         $this->update([
             'called_at' => Carbon::now(),
             'call_followup_summary' => $summary,
+            'call_status' => $status,
             'next_call_date' => $nextCallDate,
         ]);
     }

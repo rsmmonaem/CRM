@@ -133,14 +133,14 @@ watch(() => props.show, (newValue) => {
                             <!-- Phone -->
                             <div>
                                 <label for="phone" class="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                                    Phone Number
+                                    Phone Number (Optional if Email provided)
                                 </label>
                                 <input
                                     type="tel"
                                     id="phone"
                                     v-model="form.phone"
                                     class="mt-1 block w-full border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                                    :class="{ 'border-red-500': form.errors.phone }"
+                                    :class="{ 'border-red-500': form.errors.phone || form.errors.contact }"
                                     placeholder="Enter phone number"
                                 />
                                 <div v-if="form.errors.phone" class="mt-1 text-sm text-red-600 dark:text-red-400">
@@ -151,14 +151,14 @@ watch(() => props.show, (newValue) => {
                             <!-- Email -->
                             <div>
                                 <label for="email" class="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                                    Email Address
+                                    Email Address (Optional if Phone provided)
                                 </label>
                                 <input
                                     type="email"
                                     id="email"
                                     v-model="form.email"
                                     class="mt-1 block w-full border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                                    :class="{ 'border-red-500': form.errors.email }"
+                                    :class="{ 'border-red-500': form.errors.email || form.errors.contact }"
                                     placeholder="Enter email address"
                                 />
                                 <div v-if="form.errors.email" class="mt-1 text-sm text-red-600 dark:text-red-400">

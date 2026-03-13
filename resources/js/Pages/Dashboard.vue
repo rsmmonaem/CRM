@@ -17,6 +17,7 @@ const props = defineProps({
     selectedUser: Object,
     services: Array,
     statuses: Array,
+    call_statuses: Array,
     modalUsers: Array,
 });
 
@@ -787,6 +788,7 @@ const PaginationComponent = {
             v-if="showCallModal"
             :lead="selectedLead"
             :statuses="statuses"
+            :call-statuses="call_statuses"
             :callDetail="selectedCallDetail"
             @close="closeCallModal"
         />
@@ -808,6 +810,7 @@ const PaginationComponent = {
             :lead="selectedLeadForShow"
             :services="services"
             :statuses="statuses"
+            :call-statuses="call_statuses"
             :users="modalUsers"
             :user="user"
             @close="closeLeadModal"

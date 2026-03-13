@@ -12,7 +12,17 @@ class PermissionSeeder extends Seeder
      */
     public function run(): void
     {
-        $modules = ['dashboard', 'leads', 'lead_details', 'services', 'statuses', 'users'];
+        $modules = [
+            'dashboard', 
+            'leads', 
+            'lead_details', 
+            'services', 
+            'statuses', 
+            'users', 
+            'report_leads', 
+            'report_call_logs', 
+            'report_user_summary'
+        ];
         $actions = ['view', 'create', 'edit', 'delete'];
 
         foreach ($modules as $module) {

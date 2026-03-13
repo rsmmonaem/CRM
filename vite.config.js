@@ -5,7 +5,7 @@ import vue from '@vitejs/plugin-vue';
 export default defineConfig({
     plugins: [
         laravel({
-            input: 'resources/js/app.js',
+            input: 'resources/js/main.js',
             ssr: 'resources/js/ssr.js',
             refresh: true,
         }),
@@ -18,4 +18,14 @@ export default defineConfig({
             },
         }),
     ],
+server: {
+    host: '0.0.0.0',
+    https: true,
+    cors: true,
+    hmr: {
+        host: 'ayan.npms.pro',
+        protocol: 'wss',
+        port: 5173,
+    },
+}
 });

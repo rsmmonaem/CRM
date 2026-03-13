@@ -43,7 +43,8 @@ class LeadController extends Controller
             'leads' => $leads,
             'user' => $user,
             'services' => Service::all(),
-            'statuses' => Status::all(),
+            'statuses' => Status::where('type', 'lead')->get(),
+            'call_statuses' => Status::where('type', 'call')->get(),
             'users' => User::all(),
         ]);
     }
@@ -128,7 +129,10 @@ class LeadController extends Controller
         return Inertia::render('Leads/Show', [
             'lead' => $lead,
             'user' => $user,
-            'statuses' => Status::all(),
+            'statuses' => Status::where('type', 'lead')->get(),
+            'call_statuses' => Status::where('type', 'call')->get(),
+            'services' => \App\Models\Service::all(),
+            'users' => \App\Models\User::where('role', 'user')->get(),
         ]);
     }
 
@@ -145,7 +149,7 @@ class LeadController extends Controller
         }
 
         $services = Service::all();
-        $statuses = Status::all();
+        $statuses = Status::where('type', 'lead')->get();
         $users = User::where('role', 'user')->get();
 
         return Inertia::render('Leads/Edit', [
@@ -235,6 +239,31 @@ class LeadController extends Controller
     }
 
     /**
+     * Remove the specified resources from storage.
+     */
+    public function bulkDestroy(Request $request)
+    {
+        $user = auth()->user();
+        $ids = $request->input('ids', []);
+
+        if (empty($ids)) {
+            return back()->with('error', 'No leads selected for deletion.');
+        }
+
+        $query = Lead::whereIn('id', $ids);
+
+        // If not admin, can only delete their own assigned leads
+        if (!$user->isAdmin()) {
+            $query->where('assigned_user_id', $user->id);
+        }
+
+        $count = $query->count();
+        $query->delete();
+
+        return redirect()->route('leads.index')->with('success', "{$count} leads deleted successfully!");
+    }
+
+    /**
      * Get lead details for API
      */
     public function getLeadDetails(Lead $lead)
@@ -262,12 +291,21 @@ class LeadController extends Controller
             'file' => 'required|file|mimes:csv,txt',
             'service_id' => 'required|exists:services,id',
             'status_id' => 'required|exists:statuses,id',
+            'assigned_user_id' => 'nullable|exists:users,id',
         ]);
+
+        $currentUser = auth()->user();
+        
+        // Determine who to assign the leads to
+        $assignedToId = $currentUser->id;
+        if ($currentUser->isAdmin() && $request->filled('assigned_user_id')) {
+            $assignedToId = $request->assigned_user_id;
+        }
 
         $file = $request->file('file');
         $handle = fopen($file->getRealPath(), 'r');
         
-        // Skip header if it exists (check if first row has "phone" or non-numeric data)
+        // Skip header if it exists
         $header = fgetcsv($handle);
         
         $importedCount = 0;
@@ -308,8 +346,8 @@ class LeadController extends Controller
                     'email' => $email,
                     'service_id' => $request->service_id,
                     'status_id' => $request->status_id,
-                    'assigned_user_id' => auth()->id(),
-                    'created_by' => auth()->id(),
+                    'assigned_user_id' => $assignedToId,
+                    'created_by' => $currentUser->id,
                 ]);
                 $importedCount++;
             } catch (\Exception $e) {

@@ -86,6 +86,21 @@ const submitLead = () => {
 
                     <!-- Form -->
                     <form @submit.prevent="submitLead" class="space-y-6">
+                        <!-- General Error Display -->
+                        <div v-if="form.errors.contact || form.errors.duplicate" class="bg-red-50 dark:bg-red-900 border border-red-200 dark:border-red-700 rounded-md p-4 mb-4">
+                            <div class="flex">
+                                <div class="flex-shrink-0">
+                                    <svg class="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
+                                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd" />
+                                    </svg>
+                                </div>
+                                <div class="ml-3">
+                                    <p class="text-sm font-medium text-red-800 dark:text-red-200">
+                                        {{ form.errors.contact || form.errors.duplicate }}
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <!-- Name -->
                             <div class="space-y-2">
@@ -126,7 +141,7 @@ const submitLead = () => {
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"></path>
                                     </svg>
                                     <span>Phone Number</span>
-                                    <span class="text-red-500 text-xs">*</span>
+                                    <span class="text-gray-400 text-xs">(At least one contact method required)</span>
                                 </label>
                                 <div class="relative">
                                     <input
@@ -134,9 +149,8 @@ const submitLead = () => {
                                         id="phone"
                                         v-model="form.phone"
                                         class="w-full pl-10 pr-4 py-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg shadow-sm focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500 transition-colors"
-                                        :class="{ 'border-red-500 focus:ring-red-500 focus:border-red-500': form.errors.phone }"
+                                        :class="{ 'border-red-500 focus:ring-red-500 focus:border-red-500': form.errors.phone || form.errors.contact }"
                                         placeholder="Enter phone number"
-                                        required
                                     />
                                     <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                                         <svg class="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -159,7 +173,7 @@ const submitLead = () => {
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path>
                                     </svg>
                                     <span>Email Address</span>
-                                    <span class="text-red-500 text-xs">*</span>
+                                    <span class="text-gray-400 text-xs">(Optional)</span>
                                 </label>
                                 <div class="relative">
                                     <input
@@ -167,9 +181,8 @@ const submitLead = () => {
                                         id="email"
                                         v-model="form.email"
                                         class="w-full pl-10 pr-4 py-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg shadow-sm focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500 transition-colors"
-                                        :class="{ 'border-red-500 focus:ring-red-500 focus:border-red-500': form.errors.email }"
+                                        :class="{ 'border-red-500 focus:ring-red-500 focus:border-red-500': form.errors.email || form.errors.contact }"
                                         placeholder="Enter email address"
-                                        required
                                     />
                                     <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                                         <svg class="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">

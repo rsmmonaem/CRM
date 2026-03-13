@@ -1,10 +1,11 @@
 <script setup>
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed, onMounted, watch } from 'vue';
 import { Link, usePage, router } from '@inertiajs/vue3';
 import ApplicationLogo from '@/Components/ApplicationLogo.vue';
 import SearchSystem from '@/Components/SearchSystem.vue';
 import { useDarkMode } from '@/composables/useDarkMode.js';
 import { useSidebarCompact } from '@/composables/useSidebarCompact.js';
+import Swal from 'sweetalert2';
 
 const page = usePage();
 const sidebarOpen = ref(false);
@@ -31,11 +32,39 @@ const handleSidebarCompactToggle = () => {
     }, 3000);
 };
 
-
-
 const logout = () => {
     router.post(route('logout'));
 };
+
+// Global flash message handler
+watch(() => page.props.flash, (flash) => {
+    if (flash?.success) {
+        Swal.fire({
+            title: 'Success!',
+            text: flash.success,
+            icon: 'success',
+            timer: 3000,
+            showConfirmButton: false,
+            background: darkMode.value ? '#1F2937' : '#FFFFFF',
+            color: darkMode.value ? '#FFFFFF' : '#111827',
+            toast: true,
+            position: 'top-end',
+        });
+    }
+    if (flash?.error) {
+        Swal.fire({
+            title: 'Error!',
+            text: flash.error,
+            icon: 'error',
+            background: darkMode.value ? '#1F2937' : '#FFFFFF',
+            color: darkMode.value ? '#FFFFFF' : '#111827',
+            toast: true,
+            position: 'top-end',
+            timer: 5000,
+            showConfirmButton: false,
+        });
+    }
+}, { deep: true });
 
 onMounted(() => {
     // Initialize dark mode and sidebar compact from localStorage
@@ -88,6 +117,13 @@ const navigation = computed(() => {
                 icon: 'M12 4.354a4 4 0 110 5.292M12 20.052v-8.69M12 20.052H10M12 20.052h2',
                 current: route().current('users.*'),
                 permission: { module: 'users', action: 'view' }
+            },
+            {
+                name: 'Reports',
+                href: route('reports.index'),
+                icon: 'M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z',
+                current: route().current('reports.*'),
+                permission: { module: 'reports', action: 'view' }
             }
         ];
 
@@ -103,6 +139,12 @@ const navigation = computed(() => {
             if (user.value.is_admin) return true;
 
             // Check if user has the required permission
+            if (item.name === 'Reports') {
+                return user.value.is_admin || 
+                       user.value.permissions?.['report_leads']?.includes('view') ||
+                       user.value.permissions?.['report_call_logs']?.includes('view') ||
+                       user.value.permissions?.['report_user_summary']?.includes('view');
+            }
             return user.value.permissions?.[item.permission.module]?.includes(item.permission.action) || false;
         });
     } catch (error) {

@@ -50,6 +50,7 @@ public function store(Request $request)
             'lead_id' => 'required|exists:leads,id',
             'call_followup_date' => 'required|date',
             'call_followup_summary' => 'required|string',
+            'call_status' => 'nullable|string',
             'next_call_date' => 'nullable|date|after:call_followup_date',
         ]);
 
@@ -67,6 +68,7 @@ public function store(Request $request)
             'lead_id' => $request->lead_id,
             'call_followup_date' => $request->call_followup_date,
             'call_followup_summary' => $request->call_followup_summary,
+            'call_status' => $request->call_status,
             'next_call_date' => $request->next_call_date,
             'called_at' => now(), // Mark as called when creating
             'created_by' => auth()->id(),
@@ -82,6 +84,7 @@ public function store(Request $request)
     {
         $request->validate([
             'call_followup_summary' => 'required|string',
+            'call_status' => 'nullable|string',
             'next_call_date' => 'nullable|date|after:today',
         ]);
 
@@ -94,6 +97,7 @@ public function store(Request $request)
 
         $leadDetail->update([
             'call_followup_summary' => $request->call_followup_summary,
+            'call_status' => $request->call_status,
             'next_call_date' => $request->next_call_date,
             'called_at' => now(),
         ]);
@@ -109,6 +113,7 @@ public function store(Request $request)
         $request->validate([
             'call_followup_date' => 'required|date',
             'call_followup_summary' => 'required|string',
+            'call_status' => 'nullable|string',
             'next_call_date' => 'nullable|date|after:call_followup_date',
         ]);
 
@@ -124,6 +129,7 @@ public function store(Request $request)
         $leadDetail->update([
             'call_followup_date' => $request->call_followup_date,
             'call_followup_summary' => $request->call_followup_summary,
+            'call_status' => $request->call_status,
             'next_call_date' => $request->next_call_date,
         ]);
 
@@ -147,5 +153,32 @@ public function store(Request $request)
         $leadDetail->delete();
 
         return redirect()->back()->with('success', 'Call detail deleted successfully!');
+    }
+
+    /**
+     * Remove the specified resources from storage.
+     */
+    public function bulkDestroy(Request $request)
+    {
+        $user = auth()->user();
+        $ids = $request->input('ids', []);
+
+        if (empty($ids)) {
+            return back()->with('error', 'No call logs selected for deletion.');
+        }
+
+        $query = LeadDetail::whereIn('id', $ids);
+
+        // If not admin, can only delete their own assigned leads' details
+        if (!$user->isAdmin() && !$user->hasPermission('leads', 'delete')) {
+            $query->whereHas('lead', function($q) use ($user) {
+                $q->where('assigned_user_id', $user->id);
+            });
+        }
+
+        $count = $query->count();
+        $query->delete();
+
+        return redirect()->back()->with('success', "{$count} call logs deleted successfully!");
     }
 }

@@ -12,7 +12,8 @@ const props = defineProps({
     services: Array,
     statuses: Array,
     users: Array,
-    user: Object
+    user: Object,
+    callStatuses: Array,
 });
 
 const emit = defineEmits(['close']);
@@ -380,6 +381,7 @@ const formatEmail = (email) => {
         v-if="showCallModal"
         :lead="lead"
         :statuses="statuses"
+        :call-statuses="callStatuses"
         @close="closeCallModals"
     />
 
@@ -394,6 +396,7 @@ const formatEmail = (email) => {
         v-if="showEditCallModal"
         :callDetail="selectedCallDetail"
         :lead="lead"
+        :call-statuses="callStatuses"
         @close="closeCallModals"
     />
 </template>

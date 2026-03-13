@@ -39,9 +39,15 @@ class HandleInertiaRequests extends Middleware
                         'email' => $request->user()->email,
                         'role' => $request->user()->role,
                         'is_admin' => $request->user()->isAdmin(),
+                        'dark_mode' => $request->user()->dark_mode,
+                        'default_view_mode' => $request->user()->default_view_mode,
                         'permissions' => $request->user()->getPermissionsByModule(),
                     ] : null,
                 ],
+            'flash' => [
+                'success' => $request->session()->get('success'),
+                'error' => $request->session()->get('error'),
+            ],
             'ziggy' => fn () => [
                 ...(new Ziggy)->toArray(),
                 'location' => $request->url(),
