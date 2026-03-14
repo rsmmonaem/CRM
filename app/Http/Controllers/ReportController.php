@@ -10,6 +10,7 @@ use App\Models\Status;
 use App\Models\User;
 use App\Models\LeadDetail;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\Cache;
 
 class ReportController extends Controller
 {
@@ -19,10 +20,15 @@ class ReportController extends Controller
     public function index()
     {
         $user = auth()->user();
+        
+        $services = Cache::remember('services_list', 3600, fn() => Service::all());
+        $statuses = Cache::remember('lead_statuses_list', 3600, fn() => Status::where('type', 'lead')->get());
+        $users = Cache::remember('users_list', 3600, fn() => $user->isAdmin() ? User::all() : [$user]);
+
         return Inertia::render('Reports/Index', [
-            'services' => Service::all(),
-            'statuses' => Status::where('type', 'lead')->get(),
-            'users' => $user->isAdmin() ? User::all() : [$user],
+            'services' => $services,
+            'statuses' => $statuses,
+            'users' => $users,
         ]);
     }
 
@@ -49,21 +55,25 @@ class ReportController extends Controller
         }
 
         if ($request->filled('from_date')) {
-            $query->whereDate('created_at', '>=', $request->from_date);
+            $query->where('created_at', '>=', \Carbon\Carbon::parse($request->from_date)->startOfDay());
         }
 
         if ($request->filled('to_date')) {
-            $query->whereDate('created_at', '<=', $request->to_date);
+            $query->where('created_at', '<=', \Carbon\Carbon::parse($request->to_date)->endOfDay());
         }
 
         $leads = $query->orderBy('created_at', 'desc')->get();
 
+        $services = Cache::remember('services_list', 3600, fn() => Service::all());
+        $statuses = Cache::remember('lead_statuses_list', 3600, fn() => Status::where('type', 'lead')->get());
+        $users = Cache::remember('users_list', 3600, fn() => $user->isAdmin() ? User::all() : [$user]);
+
         return Inertia::render('Reports/LeadReport', [
             'leads' => $leads,
             'filters' => $request->all(),
-            'services' => Service::all(),
-            'statuses' => Status::where('type', 'lead')->get(),
-            'users' => $user->isAdmin() ? User::all() : [$user],
+            'services' => $services,
+            'statuses' => $statuses,
+            'users' => $users,
         ]);
     }
 
@@ -102,11 +112,11 @@ class ReportController extends Controller
         }
 
         if ($request->filled('from_date')) {
-            $query->whereDate('created_at', '>=', $request->from_date);
+            $query->where('created_at', '>=', \Carbon\Carbon::parse($request->from_date)->startOfDay());
         }
 
         if ($request->filled('to_date')) {
-            $query->whereDate('created_at', '<=', $request->to_date);
+            $query->where('created_at', '<=', \Carbon\Carbon::parse($request->to_date)->endOfDay());
         }
 
         $callLogs = $query->orderBy('created_at', 'desc')->get();
@@ -125,14 +135,22 @@ class ReportController extends Controller
     public function userSummaryReport(Request $request)
     {
         $user = auth()->user();
-        $query = Lead::query()
-            ->select('assigned_user_id', 'status_id', \DB::raw('count(*) as total'))
-            ->groupBy('assigned_user_id', 'status_id')
-            ->with(['assignedUser:id,name', 'status:id,name']);
+        
+        // 1. Caching lookup data
+        $usersList = Cache::remember('summary_users_list_' . ($user->isAdmin() ? 'all' : $user->id), 3600, function() use ($user) {
+            return $user->isAdmin() ? User::all(['id', 'name']) : User::where('id', $user->id)->get(['id', 'name']);
+        });
+        $statusesList = Cache::remember('lead_statuses_list', 3600, function() {
+            return Status::where('type', 'lead')->get(['id', 'name']);
+        });
 
+        // 2. Building query
+        $query = Lead::query();
+
+        // Apply filters
         if (!$user->isAdmin()) {
             $query->where('assigned_user_id', $user->id);
-        } else if ($request->filled('assigned_user_id')) {
+        } elseif ($request->filled('assigned_user_id')) {
             $query->where('assigned_user_id', $request->assigned_user_id);
         }
 
@@ -144,24 +162,24 @@ class ReportController extends Controller
             $query->where('status_id', $request->status_id);
         }
 
+        // Date Filters
         if ($request->filled('from_date')) {
-            $query->whereDate('created_at', '>=', $request->from_date);
+            $query->where('created_at', '>=', \Carbon\Carbon::parse($request->from_date)->startOfDay());
         }
 
         if ($request->filled('to_date')) {
-            $query->whereDate('created_at', '<=', $request->to_date);
+            $query->where('created_at', '<=', \Carbon\Carbon::parse($request->to_date)->endOfDay());
         }
 
-        $results = $query->get();
-
-        // Format data for easier table rendering
-        $users = $user->isAdmin() ? User::all(['id', 'name']) : User::where('id', $user->id)->get(['id', 'name']);
-        $statuses = Status::where('type', 'lead')->get(['id', 'name']);
+        // Aggregate results
+        $results = $query->select('assigned_user_id', 'status_id', \DB::raw('count(*) as total'))
+            ->groupBy('assigned_user_id', 'status_id')
+            ->get();
 
         return Inertia::render('Reports/UserSummaryReport', [
             'results' => $results,
-            'users' => $users,
-            'statuses' => $statuses,
+            'users' => $usersList,
+            'statuses' => $statusesList,
             'filters' => $request->all(),
         ]);
     }
@@ -188,10 +206,10 @@ class ReportController extends Controller
         }
 
         if ($request->filled('from_date')) {
-            $query->whereDate('created_at', '>=', $request->from_date);
+            $query->where('created_at', '>=', \Carbon\Carbon::parse($request->from_date)->startOfDay());
         }
         if ($request->filled('to_date')) {
-            $query->whereDate('created_at', '<=', $request->to_date);
+            $query->where('created_at', '<=', \Carbon\Carbon::parse($request->to_date)->endOfDay());
         }
 
         $leads = $query->orderBy('created_at', 'desc')->get();
@@ -234,10 +252,10 @@ class ReportController extends Controller
         }
 
         if ($request->filled('from_date')) {
-            $query->whereDate('created_at', '>=', $request->from_date);
+            $query->where('created_at', '>=', \Carbon\Carbon::parse($request->from_date)->startOfDay());
         }
         if ($request->filled('to_date')) {
-            $query->whereDate('created_at', '<=', $request->to_date);
+            $query->where('created_at', '<=', \Carbon\Carbon::parse($request->to_date)->endOfDay());
         }
 
         $callLogs = $query->orderBy('created_at', 'desc')->get();
@@ -265,13 +283,15 @@ class ReportController extends Controller
         }
 
         if ($request->filled('from_date')) {
-            $query->whereDate('created_at', '>=', $request->from_date);
+            $query->where('created_at', '>=', \Carbon\Carbon::parse($request->from_date)->startOfDay());
         }
         if ($request->filled('to_date')) {
-            $query->whereDate('created_at', '<=', $request->to_date);
+            $query->where('created_at', '<=', \Carbon\Carbon::parse($request->to_date)->endOfDay());
         }
 
-        $results = $query->get();
+        $results = $query->select('assigned_user_id', 'status_id', \DB::raw('count(*) as total'))
+            ->groupBy('assigned_user_id', 'status_id')
+            ->get();
         $users = $user->isAdmin() ? User::all(['id', 'name']) : User::where('id', $user->id)->get(['id', 'name']);
         $statuses = Status::where('type', 'lead')->get(['id', 'name']);
 

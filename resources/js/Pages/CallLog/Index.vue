@@ -164,12 +164,12 @@ const filteredCallLogs = computed(() => {
     }
 
     // User filter (admin only)
-    if (filters.value.user && props.user?.is_admin) {
+    if (filters.value.user && props.user?.role === 'admin') {
         result = result.filter(log => log.lead?.assigned_user_id == filters.value.user);
     }
 
     // Logs By filter (admin only)
-    if (filters.value.log_by && props.user?.is_admin) {
+    if (filters.value.log_by && props.user?.role === 'admin') {
         result = result.filter(log => log.created_by == filters.value.log_by);
     }
 
@@ -437,7 +437,7 @@ const saveDefaultView = (mode) => {
                 </div>
 
                 <!-- User Filter -->
-                <div v-if="props.user?.is_admin">
+                <div v-if="props.user?.role === 'admin'">
                     <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                         Assigned User
                     </label>
@@ -453,7 +453,7 @@ const saveDefaultView = (mode) => {
                 </div>
 
                 <!-- Logs By Filter -->
-                <div v-if="props.user?.is_admin">
+                <div v-if="props.user?.role === 'admin'">
                     <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                         Logs By
                     </label>
@@ -521,7 +521,7 @@ const saveDefaultView = (mode) => {
                             </svg>
                         </button>
                     </span>
-                    <span v-if="filters.user && props.user?.is_admin" class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200">
+                    <span v-if="filters.user && props.user?.role === 'admin'" class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200">
                         Assigned To: {{ users.find(u => u.id == filters.user)?.name }}
                         <button @click="filters.user = ''" class="ml-1 text-orange-600 hover:text-orange-800">
                             <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -529,7 +529,7 @@ const saveDefaultView = (mode) => {
                             </svg>
                         </button>
                     </span>
-                    <span v-if="filters.log_by && props.user?.is_admin" class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-teal-100 text-teal-800 dark:bg-teal-900 dark:text-teal-200">
+                    <span v-if="filters.log_by && props.user?.role === 'admin'" class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-teal-100 text-teal-800 dark:bg-teal-900 dark:text-teal-200">
                         Logged By: {{ users.find(u => u.id == filters.log_by)?.name }}
                         <button @click="filters.log_by = ''" class="ml-1 text-teal-600 hover:text-teal-800">
                             <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -716,8 +716,8 @@ const saveDefaultView = (mode) => {
                         <!-- Call Details -->
                         <div class="mt-2 p-2 bg-blue-50 dark:bg-blue-900/20 rounded border border-blue-200 dark:border-blue-700 text-xs text-blue-600 dark:text-blue-300">
                             <div class="grid grid-cols-2 gap-2">
-                                <div><strong>Call Date:</strong> {{ callLog.call_followup_date ? new Date(callLog.call_followup_date).toLocaleDateString() : '-' }}</div>
-                                <div><strong>Next Call:</strong> {{ callLog.next_call_date ? new Date(callLog.next_call_date).toLocaleDateString() : '-' }}</div>
+                                <div><strong>Call Date:</strong> {{ callLog.call_followup_date ? new Date(callLog.call_followup_date).toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' }) : '-' }}</div>
+                                <div><strong>Next Call:</strong> {{ callLog.next_call_date ? new Date(callLog.next_call_date).toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' }) : '-' }}</div>
                             </div>
                         </div>
 
@@ -786,8 +786,8 @@ const saveDefaultView = (mode) => {
                                         <div class="text-xs text-gray-500 dark:text-gray-400">{{ callLog.created_at ? new Date(callLog.created_at).toLocaleDateString() : '-' }}</div>
                                     </td>
                                     <td class="px-6 py-4   text-xs text-gray-500 dark:text-gray-400">
-                                        <div>Call: {{ callLog.call_followup_date ? new Date(callLog.call_followup_date).toLocaleDateString() : '-' }}</div>
-                                        <div>Next: {{ callLog.next_call_date ? new Date(callLog.next_call_date).toLocaleDateString() : '-' }}</div>
+                                        <div>Call: {{ callLog.call_followup_date ? new Date(callLog.call_followup_date).toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' }) : '-' }}</div>
+                                        <div>Next: {{ callLog.next_call_date ? new Date(callLog.next_call_date).toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' }) : '-' }}</div>
                                     </td>
                                     <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium space-x-3">
                                         <Link v-if="callLog.lead?.id" :href="route('leads.show', callLog.lead.id)" class="text-blue-600 hover:text-blue-900 dark:text-blue-400 dark:hover:text-blue-300">View Lead</Link>

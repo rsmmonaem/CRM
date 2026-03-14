@@ -18,14 +18,13 @@ export default defineConfig({
             },
         }),
     ],
-server: {
-    host: '0.0.0.0',
-    https: true,
-    cors: true,
-    hmr: {
-        host: 'ayan.npms.pro',
-        protocol: 'wss',
+    server: {
+        host: '0.0.0.0',
         port: 5173,
+        strictPort: true,
+        https: false, // Set to true if you need HTTPS locally
+        hmr: {
+            host: 'localhost',
+        },
     },
-}
 });

@@ -72,7 +72,7 @@ watch(() => props.callDetail, (newCallDetail) => {
     if (newCallDetail) {
         form.call_followup_summary = newCallDetail.call_followup_summary || '';
         form.call_status = newCallDetail.call_status || 'Connected';
-        form.next_call_date = newCallDetail.next_call_date ? new Date(newCallDetail.next_call_date).toISOString().split('T')[0] : '';
+        form.next_call_date = newCallDetail.next_call_date ? new Date(new Date(newCallDetail.next_call_date).getTime() - (new Date().getTimezoneOffset() * 60000)).toISOString().slice(0, 16) : '';
     }
 }, { immediate: true });
 
@@ -518,7 +518,7 @@ onUnmounted(() => {
                                         Next Call Date (Optional)
                                     </label>
                                     <input
-                                        type="date"
+                                        type="datetime-local"
                                         id="next_call_date"
                                         v-model="form.next_call_date"
                                         class="mt-1 block w-full border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
@@ -570,7 +570,7 @@ onUnmounted(() => {
                                             </span>
                                         </div>
                                         <span class="text-xs text-gray-500 dark:text-gray-400">
-                                            {{ new Date(detail.call_followup_date).toLocaleDateString() }}
+                                            {{ new Date(detail.call_followup_date).toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' }) }}
                                         </span>
                                     </div>
 
@@ -579,11 +579,11 @@ onUnmounted(() => {
                                     </p>
 
                                     <div v-if="detail.next_call_date" class="text-xs text-gray-500 dark:text-gray-400">
-                                        Next call: {{ new Date(detail.next_call_date).toLocaleDateString() }}
+                                        Next call: {{ new Date(detail.next_call_date).toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' }) }}
                                     </div>
 
                                     <div v-if="detail.called_at" class="text-xs text-green-600 dark:text-green-400 mt-1">
-                                        ✓ Completed on {{ new Date(detail.called_at).toLocaleDateString() }}
+                                        ✓ Completed on {{ new Date(detail.called_at).toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' }) }}
                                     </div>
                                     <div v-else class="text-xs text-orange-600 dark:text-orange-400 mt-1">
                                         ⏳ Pending

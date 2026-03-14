@@ -193,7 +193,7 @@ const deleteCallDetail = (callDetail) => {
                                     <div class="flex-1">
                                         <div class="flex items-center space-x-4">
                                             <h4 class="text-lg font-medium text-gray-900 dark:text-gray-100">
-                                                Call on {{ new Date(call.call_followup_date).toLocaleDateString() }}
+                                                Call on {{ new Date(call.call_followup_date).toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' }) }}
                                             </h4>
                                             <span class="text-sm text-gray-500 dark:text-gray-400">
                                                 by {{ call.creator.name }}
@@ -202,7 +202,7 @@ const deleteCallDetail = (callDetail) => {
                                         <p class="text-sm text-gray-600 dark:text-gray-400 mt-2">{{ call.call_followup_summary }}</p>
                                         <div v-if="call.next_call_date" class="mt-2">
                                             <p class="text-sm text-blue-600 dark:text-blue-400">
-                                                Next call scheduled: {{ new Date(call.next_call_date).toLocaleDateString() }}
+                                                Next call scheduled: {{ new Date(call.next_call_date).toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' }) }}
                                             </p>
                                         </div>
                                     </div>

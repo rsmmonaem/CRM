@@ -30,7 +30,7 @@ watch(() => props.callDetail, (newCallDetail) => {
         form.call_status = newCallDetail.call_status || 'Connected';
 
         form.next_call_date = newCallDetail.next_call_date ?
-            newCallDetail.next_call_date.split('T')[0] : '';
+            new Date(new Date(newCallDetail.next_call_date).getTime() - (new Date().getTimezoneOffset() * 60000)).toISOString().slice(0, 16) : '';
     }
 }, { immediate: true });
 
@@ -149,7 +149,7 @@ const submitEdit = () => {
                                     Next Call Date (Optional)
                                 </label>
                                 <input
-                                    type="date"
+                                    type="datetime-local"
                                     id="edit_next_call_date"
                                     v-model="form.next_call_date"
                                     class="mt-1 block w-full border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"

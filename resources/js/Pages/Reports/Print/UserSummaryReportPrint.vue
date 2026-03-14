@@ -10,13 +10,13 @@ const props = defineProps({
 });
 
 const getTotal = (userId, statusId) => {
-    const item = props.results.find(r => r.assigned_user_id === userId && r.status_id === statusId);
+    const item = props.results.find(r => r.assigned_user_id == userId && r.status_id == statusId);
     return item ? item.total : 0;
 };
 
 const getUserTotal = (userId) => {
     return props.results
-        .filter(r => r.assigned_user_id === userId)
+        .filter(r => r.assigned_user_id == userId)
         .reduce((sum, current) => sum + current.total, 0);
 };
 </script>
@@ -68,7 +68,7 @@ const getUserTotal = (userId) => {
                     <tr class="thead-light">
                         <th class="text-right pr-4">Matrix Total:</th>
                         <th v-for="status in statuses" :key="'sum-'+status.id">
-                            {{ results.filter(r => r.status_id === status.id).reduce((sum, current) => sum + current.total, 0) }}
+                            {{ results.filter(r => r.status_id == status.id).reduce((sum, current) => sum + current.total, 0) }}
                         </th>
                         <th class="bg-info text-white">{{ results.reduce((sum, r) => sum + r.total, 0) }}</th>
                     </tr>

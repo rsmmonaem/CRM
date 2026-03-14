@@ -99,13 +99,13 @@ const leadDetails = computed(() => {
 
 const nextCallDate = computed(() => {
     return leadDetails.value?.next_call_date
-        ? new Date(leadDetails.value.next_call_date).toLocaleDateString()
+        ? new Date(leadDetails.value.next_call_date).toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' })
         : 'Not set';
 });
 
 const lastCallDate = computed(() => {
     return leadDetails.value?.called_at
-        ? new Date(leadDetails.value.called_at).toLocaleDateString()
+        ? new Date(leadDetails.value.called_at).toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' })
         : 'Never';
 });
 
@@ -273,7 +273,7 @@ const formatEmail = (email) => {
                             <div class="flex justify-between items-start mb-2">
                                 <div>
                                     <h5 class="text-sm font-semibold text-gray-900 dark:text-white">
-                                        Call on {{ detail.called_at ? new Date(detail.called_at).toLocaleDateString() : 'Not called' }}
+                                        Call on {{ detail.called_at ? new Date(detail.called_at).toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' }) : 'Not called' }}
                                     </h5>
                                     <p class="text-xs text-gray-500 dark:text-gray-400">
                                         by {{ lead.assigned_user?.name || 'Unknown User' }}
@@ -294,7 +294,7 @@ const formatEmail = (email) => {
                             <!-- Next Call Info -->
                             <div v-if="detail.next_call_date" class="mb-2">
                                 <p class="text-xs text-gray-600 dark:text-gray-400">
-                                    <span class="font-medium">Next call scheduled:</span> {{ new Date(detail.next_call_date).toLocaleDateString() }}
+                                    <span class="font-medium">Next call scheduled:</span> {{ new Date(detail.next_call_date).toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' }) }}
                                 </p>
                             </div>
 

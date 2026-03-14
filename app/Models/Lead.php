@@ -86,6 +86,14 @@ class Lead extends Model
     }
 
     /**
+     * Get the latest lead detail for this lead
+     */
+    public function latestLeadDetail()
+    {
+        return $this->hasOne(LeadDetail::class)->latestOfMany();
+    }
+
+    /**
      * Get the latest call tracking for this lead
      */
     public function latestCallTracking()

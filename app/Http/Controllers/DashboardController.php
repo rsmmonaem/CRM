@@ -10,6 +10,7 @@ use App\Models\User;
 use App\Models\Service;
 use App\Models\Status;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\Cache;
 
 class DashboardController extends Controller
 {
@@ -18,121 +19,92 @@ class DashboardController extends Controller
         $user = auth()->user();
         $today = Carbon::today();
 
-        // Subquery to get the latest LeadDetail for each lead
-        $latestLeadDetail = LeadDetail::select('id', 'lead_id', 'next_call_date', 'called_at')
-            ->whereIn('id', function ($query) {
-                $query->selectRaw('MAX(id)')
-                      ->from('lead_details')
-                      ->groupBy('lead_id');
+        // 1. Static/Lookup Data (Cached for 1 hour)
+        $services = Cache::remember('services_list', 3600, fn() => Service::all());
+        $statuses = Cache::remember('lead_statuses_list', 3600, fn() => Status::where('type', 'lead')->get());
+        $call_statuses = Cache::remember('call_statuses_list', 3600, fn() => Status::where('type', 'call')->get());
+        $modalUsers = Cache::remember('users_list', 3600, fn() => User::where('role', 'user')->select('id', 'name')->get());
+
+        // 2. Optimized Dashboard Queries using latestLeadDetail
+        $todaysCallsQuery = Lead::with(['service', 'status', 'assignedUser', 'latestLeadDetail'])
+            ->whereHas('latestLeadDetail', function ($q) use ($today) {
+                $q->whereDate('next_call_date', $today);
             });
 
-        // --- 1. Today's Calls ---
-        $todaysCallsQuery = Lead::with(['service', 'status', 'assignedUser', 'leadDetails' => function ($q) {
-                $q->latest()->limit(1);
-            }])
-            ->whereIn('id', function ($query) use ($today) {
-                $query->select('lead_id')
-                    ->from('lead_details')
-                    ->whereIn('id', function ($subQuery) {
-                        $subQuery->selectRaw('MAX(id)')
-                            ->from('lead_details')
-                            ->groupBy('lead_id');
-                    })
-                    ->whereDate('next_call_date', $today);
-            })
-            ->orderByDesc(
-                LeadDetail::select('next_call_date')
-                    ->whereColumn('lead_id', 'leads.id')
-                    ->latest()
-                    ->take(1)
-            );
+        $pendingCallsQuery = Lead::with(['service', 'status', 'assignedUser', 'latestLeadDetail'])
+            ->whereHas('latestLeadDetail', function ($q) use ($today) {
+                $q->whereDate('next_call_date', '<', $today);
+            });
 
-        // --- 2. Pending Calls ---
-        $pendingCallsQuery = Lead::with(['service', 'status', 'assignedUser', 'leadDetails' => function ($q) {
-                $q->latest()->limit(1);
-            }])
-            ->whereIn('id', function ($query) use ($today) {
-                $query->select('lead_id')
-                    ->from('lead_details')
-                    ->whereIn('id', function ($subQuery) {
-                        $subQuery->selectRaw('MAX(id)')
-                            ->from('lead_details')
-                            ->groupBy('lead_id');
-                    })
-                    ->whereDate('next_call_date', '<', $today);
-            })
-            ->orderBy(
-                LeadDetail::select('next_call_date')
-                    ->whereColumn('lead_id', 'leads.id')
-                    ->latest()
-                    ->take(1)
-            );
+        $upcomingCallsQuery = Lead::with(['service', 'status', 'assignedUser', 'latestLeadDetail'])
+            ->whereHas('latestLeadDetail', function ($q) use ($today) {
+                $q->whereDate('next_call_date', '>', $today);
+            });
 
-        // --- 3. Upcoming Calls ---
-        $upcomingCallsQuery = Lead::with(['service', 'status', 'assignedUser', 'leadDetails' => function ($q) {
-                $q->latest()->limit(1);
-            }])
-            ->whereIn('id', function ($query) use ($today) {
-                $query->select('lead_id')
-                    ->from('lead_details')
-                    ->whereIn('id', function ($subQuery) {
-                        $subQuery->selectRaw('MAX(id)')
-                            ->from('lead_details')
-                            ->groupBy('lead_id');
-                    })
-                    ->whereDate('next_call_date', '>', $today);
-            })
-            ->orderBy(
-                LeadDetail::select('next_call_date')
-                    ->whereColumn('lead_id', 'leads.id')
-                    ->latest()
-                    ->take(1)
-            );
-
-        // --- Filter by user role ---
         if (!$user->isAdmin()) {
             $todaysCallsQuery->where('assigned_user_id', $user->id);
             $pendingCallsQuery->where('assigned_user_id', $user->id);
             $upcomingCallsQuery->where('assigned_user_id', $user->id);
         }
 
-        // --- Execute queries ---
-        $todaysCalls = $todaysCallsQuery->get();
-        $pendingCalls = $pendingCallsQuery->get();
-        $upcomingCalls = $upcomingCallsQuery->get();
+        $todaysCalls = $todaysCallsQuery->orderBy(
+            LeadDetail::select('next_call_date')
+                ->whereColumn('lead_id', 'leads.id')
+                ->latest()
+                ->take(1),
+            'desc'
+        )->get();
 
-        // --- Stats and other data ---
-        $leads = Lead::with(['service', 'status', 'assignedUser', 'leadDetails' => function ($q) {
-            $q->latest();
-        }])
-        ->when(!$user->isAdmin(), fn($q) => $q->where('assigned_user_id', $user->id))
-        ->orderBy('created_at', 'desc')
-        ->get();
+        $pendingCalls = $pendingCallsQuery->orderBy(
+            LeadDetail::select('next_call_date')
+                ->whereColumn('lead_id', 'leads.id')
+                ->latest()
+                ->take(1)
+        )->get();
 
-        $stats = [
-            'total_leads' => $leads->count(),
-            'todays_calls' => $todaysCalls->count(),
-            'pending_calls' => $pendingCalls->count(),
-            'upcoming_calls' => $upcomingCalls->count(),
-            'leads_by_status' => $leads->groupBy('status.name')->map->count(),
-        ];
+        $upcomingCalls = $upcomingCallsQuery->orderBy(
+            LeadDetail::select('next_call_date')
+                ->whereColumn('lead_id', 'leads.id')
+                ->latest()
+                ->take(1)
+        )->get();
 
-        $users = $user->isAdmin() ? User::where('role', 'user')->get() : collect();
-        $services = Service::all();
-        $statuses = Status::all();
-        $modalUsers = User::where('role', 'user')->get();
+        // 3. Stats (Cached for 5 minutes per user)
+        $statsCacheKey = 'dashboard_stats_' . $user->id;
+        $stats = Cache::remember($statsCacheKey, 300, function() use ($user, $todaysCalls, $pendingCalls, $upcomingCalls) {
+            $leadsQuery = Lead::when(!$user->isAdmin(), fn($q) => $q->where('assigned_user_id', $user->id));
+            
+            return [
+                'total_leads' => $leadsQuery->count(),
+                'todays_calls' => $todaysCalls->count(),
+                'pending_calls' => $pendingCalls->count(),
+                'upcoming_calls' => $upcomingCalls->count(),
+                'leads_by_status' => Lead::join('statuses', 'leads.status_id', '=', 'statuses.id')
+                    ->when(!$user->isAdmin(), fn($q) => $q->where('assigned_user_id', $user->id))
+                    ->groupBy('statuses.name')
+                    ->selectRaw('statuses.name, count(*) as count')
+                    ->pluck('count', 'name'),
+            ];
+        });
+
+        // 4. Recently created leads (Limited to 20 for performance)
+        $recentLeads = Lead::with(['service', 'status', 'assignedUser', 'latestLeadDetail'])
+            ->when(!$user->isAdmin(), fn($q) => $q->where('assigned_user_id', $user->id))
+            ->orderBy('created_at', 'desc')
+            ->limit(20)
+            ->get();
 
         return Inertia::render('Dashboard', [
             'todaysCalls' => $todaysCalls,
             'pendingCalls' => $pendingCalls,
             'upcomingCalls' => $upcomingCalls,
-            'leads' => $leads,
+            'leads' => $recentLeads,
             'stats' => $stats,
-            'users' => $users,
+            'users' => $modalUsers,
             'user' => $user,
             'services' => $services,
             'statuses' => $statuses,
-            'call_statuses' => Status::where('type', 'call')->get(),
+            'call_statuses' => $call_statuses,
             'modalUsers' => $modalUsers,
         ]);
     }

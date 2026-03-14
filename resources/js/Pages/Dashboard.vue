@@ -416,10 +416,10 @@ const PaginationComponent = {
                                 <p class="text-sm text-gray-600 dark:text-gray-400">{{ lead.company_name || 'N/A' }}</p>
                                 <p class="text-sm text-gray-500 dark:text-gray-400">{{ lead.phone || 'N/A' }} • {{ lead.email || 'N/A' }}</p>
                                 <p class="text-sm text-gray-500 dark:text-gray-400 mt-2">
-                                    {{ lead.lead_details && lead.lead_details.length > 0 ? lead.lead_details[0].call_followup_summary || 'No summary available' : 'No call details available' }}
+                                    {{ lead.latest_lead_detail ? lead.latest_lead_detail.call_followup_summary || 'No summary available' : 'No call details available' }}
                                 </p>
                                 <p class="text-xs text-blue-500 mt-1">
-                                    Scheduled: {{ lead.lead_details && lead.lead_details.length > 0 ? new Date(lead.lead_details[0].next_call_date).toLocaleDateString() : 'No date set' }}
+                                    Scheduled: {{ lead.latest_lead_detail ? new Date(lead.latest_lead_detail.next_call_date).toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' }) : 'No date set' }}
                                 </p>
                                 <div class="flex items-center space-x-2 mt-2">
                                     <span class="px-2 py-1 text-xs bg-blue-100 text-blue-800 rounded-full">{{ lead.status?.name || 'No Status' }}</span>
@@ -522,10 +522,10 @@ const PaginationComponent = {
                                 <p class="text-sm text-gray-600 dark:text-gray-400">{{ lead.company_name || 'N/A' }}</p>
                                 <p class="text-sm text-gray-500 dark:text-gray-400">{{ lead.phone || 'N/A' }} • {{ lead.email || 'N/A' }}</p>
                                 <p class="text-sm text-gray-500 dark:text-gray-400 mt-2">
-                                    {{ lead.lead_details && lead.lead_details.length > 0 ? lead.lead_details[0].call_followup_summary || 'No summary available' : 'No call details available' }}
+                                    {{ lead.latest_lead_detail ? lead.latest_lead_detail.call_followup_summary || 'No summary available' : 'No call details available' }}
                                 </p>
                                 <p class="text-xs text-red-500 mt-1">
-                                    Overdue: {{ lead.lead_details && lead.lead_details.length > 0 ? new Date(lead.lead_details[0].next_call_date).toLocaleDateString() : 'No date set' }}
+                                    Overdue: {{ lead.latest_lead_detail ? new Date(lead.latest_lead_detail.next_call_date).toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' }) : 'No date set' }}
                                 </p>
                                 <div class="flex items-center space-x-2 mt-2">
                                     <span class="px-2 py-1 text-xs bg-red-100 text-red-800 rounded-full">{{ lead.status?.name || 'No Status' }}</span>
@@ -629,10 +629,10 @@ const PaginationComponent = {
                             <p class="text-sm text-gray-600 dark:text-gray-400">{{ lead.company_name || 'N/A' }}</p>
                             <p class="text-sm text-gray-500 dark:text-gray-400">{{ lead.phone || 'N/A' }} • {{ lead.email || 'N/A' }}</p>
                             <p class="text-sm text-gray-500 dark:text-gray-400 mt-2">
-                                {{ lead.lead_details && lead.lead_details.length > 0 ? lead.lead_details[0].call_followup_summary || 'No summary available' : 'No call details available' }}
+                                {{ lead.latest_lead_detail ? lead.latest_lead_detail.call_followup_summary || 'No summary available' : 'No call details available' }}
                             </p>
                             <p class="text-xs text-green-500 mt-1">
-                                Scheduled: {{ lead.lead_details && lead.lead_details.length > 0 ? new Date(lead.lead_details[0].next_call_date).toLocaleDateString() : 'No date set' }}
+                                Scheduled: {{ lead.latest_lead_detail ? new Date(lead.latest_lead_detail.next_call_date).toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' }) : 'No date set' }}
                             </p>
                             <div class="flex items-center space-x-2 mt-2">
                                 <span class="px-2 py-1 text-xs bg-green-100 text-green-800 rounded-full">{{ lead.status?.name || 'No Status' }}</span>
@@ -749,7 +749,7 @@ const PaginationComponent = {
                                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">{{ lead.service.name }}</td>
                                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">{{ lead.assigned_user.name }}</td>
                                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                                    {{ lead.lead_details && lead.lead_details.length > 0 ? new Date(lead.lead_details[0].next_call_date).toLocaleDateString() : '-' }}
+                                    {{ lead.latest_lead_detail ? new Date(lead.latest_lead_detail.next_call_date).toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' }) : '-' }}
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
                                     <div class="flex space-x-1">

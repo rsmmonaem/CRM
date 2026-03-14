@@ -76,7 +76,7 @@ const props = defineProps({
                         </td>
                         <td class="small">{{ log.creator?.name }}</td>
                         <td class="small italic">{{ log.call_followup_summary || 'No Interaction Details' }}</td>
-                        <td class="text-center small font-weight-bold">{{ log.next_call_date ? new Date(log.next_call_date).toLocaleDateString() : 'N/A' }}</td>
+                        <td class="text-center small font-weight-bold">{{ log.next_call_date ? new Date(log.next_call_date).toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' }) : 'N/A' }}</td>
                     </tr>
                     <tr v-if="callLogs.length === 0">
                         <td colspan="7" class="py-5 text-center font-italic">Zero interaction logs recorded for this metadata criteria.</td>

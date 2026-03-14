@@ -21,7 +21,8 @@ class PermissionSeeder extends Seeder
             'users', 
             'report_leads', 
             'report_call_logs', 
-            'report_user_summary'
+            'report_user_summary',
+            'cr_dashboard_reporting'
         ];
         $actions = ['view', 'create', 'edit', 'delete'];
 

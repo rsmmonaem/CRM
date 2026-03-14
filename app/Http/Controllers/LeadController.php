@@ -8,44 +8,94 @@ use App\Models\Lead;
 use App\Models\Service;
 use App\Models\Status;
 use App\Models\User;
+use Illuminate\Support\Facades\Cache;
 
 class LeadController extends Controller
 {
     /**
      * Display a listing of the resource.
      */
-    public function index()
+    public function index(Request $request)
     {
         $user = auth()->user();
 
-        $leadsQuery = Lead::with(['service', 'status', 'assignedUser', 'creator', 'leadDetails' => function($query) {
-            $query->orderBy('created_at', 'desc');
-        }]);
+        // 1. Static/Lookup Data (Cached)
+        $services = Cache::remember('services_list', 3600, fn() => Service::all());
+        $statuses = Cache::remember('lead_statuses_list', 3600, fn() => Status::where('type', 'lead')->get());
+        $call_statuses = Cache::remember('call_statuses_list', 3600, fn() => Status::where('type', 'call')->get());
+        $users = Cache::remember('users_list', 3600, fn() => User::select('id', 'name')->get());
+
+        // 2. Optimized Lead Query
+        $leadsQuery = Lead::with(['service', 'status', 'assignedUser', 'creator', 'latestLeadDetail']);
 
         if (!$user->isAdmin()) {
             $leadsQuery->where('assigned_user_id', $user->id);
         }
 
-        $leads = $leadsQuery->orderBy('created_at', 'desc')->get();
+        // Apply filters
+        if ($request->filled('search')) {
+            $search = $request->input('search');
+            $leadsQuery->where(function($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%")
+                  ->orWhere('phone', 'like', "%{$search}%")
+                  ->orWhere('email', 'like', "%{$search}%")
+                  ->orWhere('company_name', 'like', "%{$search}%");
+            });
+        }
 
-        // Ensure lead details are properly loaded and appended
-        $leads->load(['leadDetails' => function($query) {
-            $query->orderBy('created_at', 'desc');
-        }]);
+        if ($request->filled('service')) {
+            $leadsQuery->where('service_id', $request->input('service'));
+        }
 
-        // Explicitly append leadDetails to each lead for frontend
-        $leads->each(function($lead) {
+        if ($request->filled('status')) {
+            $leadsQuery->where('status_id', $request->input('status'));
+        }
+
+        if ($request->filled('dateFrom')) {
+            $leadsQuery->whereDate('created_at', '>=', $request->input('dateFrom'));
+        }
+
+        if ($request->filled('dateTo')) {
+            $leadsQuery->whereDate('created_at', '<=', $request->input('dateTo'));
+        }
+
+        if ($user->isAdmin() && $request->filled('user')) {
+            $leadsQuery->where('assigned_user_id', $request->input('user'));
+        }
+
+        // Calculate stats BEFORE pagination but AFTER filtering
+        $statsQuery = clone $leadsQuery;
+        
+        $totalLeads = $statsQuery->count();
+        $serviceCounts = (clone $statsQuery)->selectRaw('service_id, count(*) as total')->groupBy('service_id')->pluck('total', 'service_id');
+        $statusCounts = (clone $statsQuery)->selectRaw('status_id, count(*) as total')->groupBy('status_id')->pluck('total', 'status_id');
+        $userCounts = (clone $statsQuery)->selectRaw('assigned_user_id, count(*) as total')->groupBy('assigned_user_id')->pluck('total', 'assigned_user_id');
+
+        $leads = $leadsQuery->orderBy('created_at', 'desc')->paginate(50)->withQueryString();
+
+        // 3. Map latestLeadDetail to lead_details array for frontend compatibility
+        $leads->getCollection()->transform(function($lead) {
+            $details = $lead->latestLeadDetail ? [$lead->latestLeadDetail] : [];
+            $lead->setRelation('leadDetails', collect($details));
             $lead->makeVisible(['lead_details']);
             $lead->setRelation('lead_details', $lead->leadDetails);
+            return $lead;
         });
 
         return Inertia::render('Leads/Index', [
             'leads' => $leads,
             'user' => $user,
-            'services' => Service::all(),
-            'statuses' => Status::where('type', 'lead')->get(),
-            'call_statuses' => Status::where('type', 'call')->get(),
-            'users' => User::all(),
+            'services' => $services,
+            'statuses' => $statuses,
+            'call_statuses' => $call_statuses,
+            'users' => $users,
+            'filters' => $request->only(['search', 'service', 'status', 'dateFrom', 'dateTo', 'user']),
+            'stats' => [
+                'total' => $totalLeads,
+                'services' => $serviceCounts,
+                'statuses' => $statusCounts,
+                'users' => $userCounts,
+            ]
         ]);
     }
 
@@ -108,6 +158,12 @@ class LeadController extends Controller
             'assigned_user_id' => $request->assigned_user_id,
             'created_by' => auth()->id(),
         ]);
+
+        // Invalidate dashboard cache
+        Cache::forget('dashboard_stats_' . auth()->id());
+        if ($request->assigned_user_id != auth()->id()) {
+            Cache::forget('dashboard_stats_' . $request->assigned_user_id);
+        }
 
         return redirect()->route('leads.index')->with('success', 'Lead created successfully!');
     }
@@ -218,6 +274,10 @@ class LeadController extends Controller
             'assigned_user_id' => $request->assigned_user_id,
         ]);
 
+        // Invalidate dashboard cache
+        Cache::forget('dashboard_stats_' . $lead->assigned_user_id);
+        Cache::forget('dashboard_stats_' . auth()->id());
+
         return back()->with('success', 'Lead updated successfully!');
     }
 
@@ -233,7 +293,12 @@ class LeadController extends Controller
             abort(403, 'Unauthorized');
         }
 
+        $assignedUser = $lead->assigned_user_id;
         $lead->delete();
+
+        // Invalidate dashboard cache
+        Cache::forget('dashboard_stats_' . $assignedUser);
+        Cache::forget('dashboard_stats_' . auth()->id());
 
         return redirect()->route('leads.index')->with('success', 'Lead deleted successfully!');
     }

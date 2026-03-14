@@ -94,7 +94,7 @@ const props = defineProps({
                             <td class="px-8 py-6 whitespace-nowrap text-center">
                                 <div v-if="log.next_call_date" class="inline-flex flex-col items-center">
                                     <span class="text-xs font-extrabold text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/40 px-3 py-1.5 rounded-lg border border-indigo-100 dark:border-indigo-800">
-                                        {{ new Date(log.next_call_date).toLocaleDateString() }}
+                                        {{ new Date(log.next_call_date).toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' }) }}
                                     </span>
                                 </div>
                                 <span v-else class="text-xs text-gray-300 dark:text-gray-600">N/A</span>

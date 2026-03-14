@@ -1,7 +1,16 @@
 <script setup>
 import ModernLayout from '@/Layouts/ModernLayout.vue';
 import { Head, Link, router, usePage } from '@inertiajs/vue3';
-import { ref, computed } from 'vue';
+import { ref, computed, watch } from 'vue';
+
+// Simple debounce function
+function debounce(func, wait) {
+    let timeout;
+    return function (...args) {
+        clearTimeout(timeout);
+        timeout = setTimeout(() => func(...args), wait);
+    };
+}
 import CallModal from '@/Components/CallModal.vue';
 import NewLeadModal from '@/Components/NewLeadModal.vue';
 import EditLeadModal from '@/Components/EditLeadModal.vue';
@@ -10,12 +19,14 @@ import ImportLeadModal from '@/Components/ImportLeadModal.vue';
 import Swal from 'sweetalert2';
 
 const props = defineProps({
-    leads: Array,
+    leads: Object,
     user: Object,
     services: Array,
     statuses: Array,
     call_statuses: Array,
     users: Array,
+    filters: Object,
+    stats: Object,
 });
 
 const page = usePage();
@@ -88,12 +99,12 @@ const deleteBulk = () => {
 
 // Filter state
 const filters = ref({
-    search: '',
-    service: '',
-    status: '',
-    dateFrom: '',
-    dateTo: '',
-    user: ''
+    search: props.filters?.search || '',
+    service: props.filters?.service || '',
+    status: props.filters?.status || '',
+    dateFrom: props.filters?.dateFrom || '',
+    dateTo: props.filters?.dateTo || '',
+    user: props.filters?.user || ''
 });
 
 const user = computed(() => page.props.auth.user);
@@ -103,49 +114,26 @@ const hasPermission = (module, action) => {
     return user.value?.permissions?.[module]?.includes(action) || false;
 };
 
-// Computed filtered leads
+// Watch for filter changes and reload via Inertia
+watch(filters, debounce((newFilters) => {
+    // Only send non-empty values
+    const query = {};
+    for (const key in newFilters) {
+        if (newFilters[key]) {
+            query[key] = newFilters[key];
+        }
+    }
+    
+    router.get(route('leads.index'), query, {
+        preserveState: true,
+        preserveScroll: true,
+        replace: true
+    });
+}, 500), { deep: true });
+
+// Computed filtered leads are now just the paginated items
 const filteredLeads = computed(() => {
-    let result = [...props.leads];
-
-    // Search filter
-    if (filters.value.search) {
-        const search = filters.value.search.toLowerCase();
-        result = result.filter(lead => 
-            lead.name?.toLowerCase().includes(search) ||
-            lead.phone?.toLowerCase().includes(search) ||
-            lead.email?.toLowerCase().includes(search) ||
-            lead.company_name?.toLowerCase().includes(search)
-        );
-    }
-
-    // Service filter
-    if (filters.value.service) {
-        result = result.filter(lead => lead.service_id == filters.value.service);
-    }
-
-    // Status filter
-    if (filters.value.status) {
-        result = result.filter(lead => lead.status_id == filters.value.status);
-    }
-
-    // Date range filter
-    if (filters.value.dateFrom) {
-        const fromDate = new Date(filters.value.dateFrom);
-        result = result.filter(lead => new Date(lead.created_at) >= fromDate);
-    }
-
-    if (filters.value.dateTo) {
-        const toDate = new Date(filters.value.dateTo);
-        toDate.setHours(23, 59, 59, 999); // Include the entire day
-        result = result.filter(lead => new Date(lead.created_at) <= toDate);
-    }
-
-    // User filter (admin only)
-    if (filters.value.user && user.value?.is_admin) {
-        result = result.filter(lead => lead.assigned_user_id == filters.value.user);
-    }
-
-    return result;
+    return props.leads.data || [];
 });
 
 // Check if any filters are active
@@ -170,47 +158,31 @@ const clearFilters = () => {
     };
 };
 
-// Get filter statistics with counts
+// Get filter statistics with counts from backend
 const filterStats = computed(() => {
-    const stats = {
-        byService: {},
-        byStatus: {},
-        byUser: {}
+    return {
+        byService: props.stats?.services || {},
+        byStatus: props.stats?.statuses || {},
+        byUser: props.stats?.users || {}
     };
-
-    props.leads.forEach(lead => {
-        // Service stats
-        const serviceName = lead.service?.name || 'Unknown';
-        stats.byService[serviceName] = (stats.byService[serviceName] || 0) + 1;
-
-        // Status stats
-        const statusName = lead.status?.name || 'Unknown';
-        stats.byStatus[statusName] = (stats.byStatus[statusName] || 0) + 1;
-
-        // User stats
-        const userName = lead.assigned_user?.name || 'Unassigned';
-        stats.byUser[userName] = (stats.byUser[userName] || 0) + 1;
-    });
-
-    return stats;
 });
 
 // Get count for specific service
 const getServiceCount = (serviceId) => {
-    if (!serviceId) return props.leads.length;
-    return props.leads.filter(lead => lead.service_id == serviceId).length;
+    if (!serviceId) return props.stats?.total || 0;
+    return props.stats?.services?.[serviceId] || 0;
 };
 
 // Get count for specific status
 const getStatusCount = (statusId) => {
-    if (!statusId) return props.leads.length;
-    return props.leads.filter(lead => lead.status_id == statusId).length;
+    if (!statusId) return props.stats?.total || 0;
+    return props.stats?.statuses?.[statusId] || 0;
 };
 
 // Get count for specific user
 const getUserCount = (userId) => {
-    if (!userId) return props.leads.length;
-    return props.leads.filter(lead => lead.assigned_user_id == userId).length;
+    if (!userId) return props.stats?.total || 0;
+    return props.stats?.users?.[userId] || 0;
 };
 
 const openCallModal = (lead) => {
@@ -404,7 +376,7 @@ const saveDefaultView = (mode) => {
                 </h3>
                 <div class="flex items-center space-x-3">
                     <span v-if="hasActiveFilters" class="text-sm text-indigo-600 dark:text-indigo-400 font-medium">
-                        {{ filteredLeads.length }} of {{ leads.length }} leads
+                        {{ leads.total }} leads found
                     </span>
                     <button
                         v-if="hasActiveFilters"
@@ -450,7 +422,7 @@ const saveDefaultView = (mode) => {
                         v-model="filters.service"
                         class="w-full border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg shadow-sm focus:ring-indigo-500 focus:border-indigo-500 text-sm h-10"
                     >
-                        <option value="">All Services ({{ leads.length }})</option>
+                        <option value="">All Services</option>
                         <option v-for="service in services" :key="service.id" :value="service.id">
                             {{ service.name }} ({{ getServiceCount(service.id) }})
                         </option>
@@ -466,7 +438,7 @@ const saveDefaultView = (mode) => {
                         v-model="filters.status"
                         class="w-full border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg shadow-sm focus:ring-indigo-500 focus:border-indigo-500 text-sm h-10"
                     >
-                        <option value="">All Statuses ({{ leads.length }})</option>
+                        <option value="">All Statuses</option>
                         <option v-for="status in statuses" :key="status.id" :value="status.id">
                             {{ status.name }} ({{ getStatusCount(status.id) }})
                         </option>
@@ -506,7 +478,7 @@ const saveDefaultView = (mode) => {
                         v-model="filters.user"
                         class="w-full border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg shadow-sm focus:ring-indigo-500 focus:border-indigo-500 text-sm"
                     >
-                        <option value="">All Users ({{ leads.length }})</option>
+                        <option value="">All Users</option>
                         <option v-for="user in users" :key="user.id" :value="user.id">
                             {{ user.name }} ({{ getUserCount(user.id) }})
                         </option>
@@ -515,28 +487,19 @@ const saveDefaultView = (mode) => {
             </div>
 
             <!-- Quick Stats (when no filters active) -->
-            <div v-if="!hasActiveFilters && leads.length > 0" class="mt-4 pt-4 border-t border-gray-200 dark:border-gray-600">
+            <div v-if="!hasActiveFilters && leads.data.length > 0" class="mt-4 pt-4 border-t border-gray-200 dark:border-gray-600">
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div class="text-center">
                         <div class="text-2xl font-bold text-blue-600 dark:text-blue-400">{{ Object.keys(filterStats.byService).length }}</div>
                         <div class="text-sm text-gray-600 dark:text-gray-400">Services</div>
-                        <div class="text-xs text-gray-500 dark:text-gray-500 mt-1">
-                            Top: {{ Object.entries(filterStats.byService).sort((a,b) => b[1] - a[1])[0]?.[0] || 'N/A' }} ({{ Object.entries(filterStats.byService).sort((a,b) => b[1] - a[1])[0]?.[1] || 0 }})
-                        </div>
                     </div>
                     <div class="text-center">
                         <div class="text-2xl font-bold text-green-600 dark:text-green-400">{{ Object.keys(filterStats.byStatus).length }}</div>
                         <div class="text-sm text-gray-600 dark:text-gray-400">Statuses</div>
-                        <div class="text-xs text-gray-500 dark:text-gray-500 mt-1">
-                            Top: {{ Object.entries(filterStats.byStatus).sort((a,b) => b[1] - a[1])[0]?.[0] || 'N/A' }} ({{ Object.entries(filterStats.byStatus).sort((a,b) => b[1] - a[1])[0]?.[1] || 0 }})
-                        </div>
                     </div>
                     <div class="text-center">
                         <div class="text-2xl font-bold text-purple-600 dark:text-purple-400">{{ Object.keys(filterStats.byUser).length }}</div>
                         <div class="text-sm text-gray-600 dark:text-gray-400">Users</div>
-                        <div class="text-xs text-gray-500 dark:text-gray-500 mt-1">
-                            Top: {{ Object.entries(filterStats.byUser).sort((a,b) => b[1] - a[1])[0]?.[0] || 'N/A' }} ({{ Object.entries(filterStats.byUser).sort((a,b) => b[1] - a[1])[0]?.[1] || 0 }})
-                        </div>
                     </div>
                 </div>
             </div>
@@ -644,7 +607,7 @@ const saveDefaultView = (mode) => {
                         </svg>
                     </button>
                     <span class="text-sm bg-blue-100 text-blue-700 px-3 py-1 rounded-full">
-                        {{ hasActiveFilters ? `${filteredLeads.length} of ${leads.length}` : `${leads.length} total` }}
+                        {{ hasActiveFilters ? `${leads.total} match filter` : `${leads.total} total` }}
                     </span>
                 </div>
             </div>
@@ -692,7 +655,7 @@ const saveDefaultView = (mode) => {
                         Clear Filters
                     </button>
                     <button
-                        v-if="leads.length === 0"
+                        v-if="!hasActiveFilters && leads.data.length === 0"
                         @click="openNewLeadModal"
                         class="inline-block bg-blue-500 hover:bg-blue-600 text-white font-semibold py-3 px-6 rounded-xl shadow-lg transition-all duration-200"
                     >
@@ -825,6 +788,50 @@ const saveDefaultView = (mode) => {
                                 </tr>
                             </tbody>
                         </table>
+                    </div>
+                </div>
+                
+                <!-- Pagination Details -->
+                <div v-if="leads.links && leads.links.length > 3" class="mt-6 flex items-center justify-between">
+                    <div class="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
+                        <div>
+                            <p class="text-sm text-gray-700 dark:text-gray-300">
+                                Showing
+                                <span class="font-medium">{{ leads.from }}</span>
+                                to
+                                <span class="font-medium">{{ leads.to }}</span>
+                                of
+                                <span class="font-medium">{{ leads.total }}</span>
+                                results
+                            </p>
+                        </div>
+                        <div>
+                            <nav class="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
+                                <template v-for="(link, key) in leads.links" :key="key">
+                                    <Link v-if="link.url" :href="link.url"
+                                        v-html="link.label"
+                                        class="relative inline-flex items-center px-4 py-2 border text-sm font-medium"
+                                        :class="[
+                                            link.active 
+                                            ? 'z-10 bg-indigo-50 border-indigo-500 text-indigo-600 dark:bg-indigo-900 dark:border-indigo-500 dark:text-indigo-200' 
+                                            : 'bg-white border-gray-300 text-gray-500 hover:bg-gray-50 dark:bg-gray-800 dark:border-gray-600 dark:text-gray-400 dark:hover:bg-gray-700',
+                                            key === 0 ? 'rounded-l-md' : '',
+                                            key === leads.links.length - 1 ? 'rounded-r-md' : ''
+                                        ]"
+                                        preserve-scroll
+                                    />
+                                    <span v-else 
+                                        v-html="link.label"
+                                        class="relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-400 dark:bg-gray-800 dark:border-gray-600 dark:text-gray-500 cursor-not-allowed"
+                                        :class="[
+                                            key === 0 ? 'rounded-l-md' : '',
+                                            key === leads.links.length - 1 ? 'rounded-r-md' : ''
+                                        ]"
+                                    >
+                                    </span>
+                                </template>
+                            </nav>
+                        </div>
                     </div>
                 </div>
             </div>

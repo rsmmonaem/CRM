@@ -38,6 +38,7 @@ Route::get('/test-simple', function () {
 
 Route::get('/dashboard', [DashboardController::class, 'index'])->middleware(['auth', 'verified'])->name('dashboard');
 Route::get('/dashboard/user/{user}', [DashboardController::class, 'filterByUser'])->middleware(['auth', 'verified'])->name('dashboard.filter');
+Route::get('/cr-dashboard', [\App\Http\Controllers\CrDashboardController::class, 'index'])->middleware(['auth', 'verified'])->name('cr-dashboard');
 
 Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');

@@ -11,13 +11,13 @@ const props = defineProps({
 
 // Calculate grand total or other metrics if needed
 const getTotal = (userId, statusId) => {
-    const item = props.results.find(r => r.assigned_user_id === userId && r.status_id === statusId);
+    const item = props.results.find(r => r.assigned_user_id == userId && r.status_id == statusId);
     return item ? item.total : 0;
 };
 
 const getUserTotal = (userId) => {
     return props.results
-        .filter(r => r.assigned_user_id === userId)
+        .filter(r => r.assigned_user_id == userId)
         .reduce((sum, current) => sum + current.total, 0);
 };
 
