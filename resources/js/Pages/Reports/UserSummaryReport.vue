@@ -10,8 +10,8 @@ const props = defineProps({
 });
 
 // Calculate grand total or other metrics if needed
-const getTotal = (userId, statusId) => {
-    const item = props.results.find(r => r.assigned_user_id == userId && r.status_id == statusId);
+const getTotal = (userId, statusName) => {
+    const item = props.results.find(r => r.assigned_user_id == userId && r.call_status === statusName);
     return item ? item.total : 0;
 };
 
@@ -39,7 +39,7 @@ const printPage = () => {
                     Back to Center
                 </Link>
                 <h1 class="text-3xl font-bold text-gray-800 dark:text-white">User Performance Summary</h1>
-                <p class="text-gray-500 dark:text-gray-400 mt-2">Aggregated counts of leads by user and their current status.</p>
+                <p class="text-gray-500 dark:text-gray-400 mt-2">Aggregated counts of Calls by user and their current status.</p>
             </div>
             
             <a :href="route('reports.user-summary.print', filters)" target="_blank" class="flex items-center space-x-2 bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-3 rounded-xl font-bold shadow-lg transition-all active:scale-95">
@@ -71,8 +71,8 @@ const printPage = () => {
                                 {{ user.name }}
                             </td>
                             <td v-for="status in statuses" :key="status.id" class="px-6 py-6 whitespace-nowrap text-center">
-                                <span v-if="getTotal(user.id, status.id) > 0" class="inline-flex items-center justify-center min-w-[32px] h-[32px] rounded-lg bg-indigo-100 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300 font-bold text-sm">
-                                    {{ getTotal(user.id, status.id) }}
+                                <span v-if="getTotal(user.id, status.name) > 0" class="inline-flex items-center justify-center min-w-[32px] h-[32px] rounded-lg bg-indigo-100 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300 font-bold text-sm">
+                                    {{ getTotal(user.id, status.name) }}
                                 </span>
                                 <span v-else class="text-gray-300 dark:text-gray-600 font-medium">-</span>
                             </td>
@@ -95,7 +95,7 @@ const printPage = () => {
                      {{ filters.from_date ? new Date(filters.from_date).toLocaleDateString() : 'Start' }} - {{ filters.to_date ? new Date(filters.to_date).toLocaleDateString() : 'Today' }}
                  </div>
                  <div class="text-indigo-600 dark:text-indigo-400 font-extrabold text-lg">
-                     Grand Total: {{ results.reduce((sum, r) => sum + r.total, 0) }} Leads
+                     Grand Total: {{ results.reduce((sum, r) => sum + r.total, 0) }} Call
                  </div>
             </div>
         </div>

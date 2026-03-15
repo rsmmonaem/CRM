@@ -64,7 +64,7 @@ class CrDashboardController extends Controller
         $pendingQuery = (clone $leadQuery)->whereHas('leadDetails', function($q) use ($today) {
             $q->whereDate('next_call_date', '<', $today);
         });
-        // $pendingCallCount = $pendingQuery->count();
+        $pendingFollowupCount = $pendingQuery->count();
         $pendingCallCount = $totalAssignLeadCount-$totalCallCount;
 
         // Today Followup (Today's Call): The NEXT call date is TODAY
@@ -126,7 +126,7 @@ class CrDashboardController extends Controller
                 'repeatCall' => $repeatCallCount,
                 'totalNumberCall' => $totalNumberCallCount,
                 'todayFollowup' => $todayFollowupCount,
-                'pendingFollowup' => $pendingCallCount,
+                'pendingFollowup' => $pendingFollowupCount,
                 'upcomingCalls' => $upcomingCallsCount,
                 'todayVisit' => $todayVisitCount,
                 'totalVisit' => $totalVisitCount,

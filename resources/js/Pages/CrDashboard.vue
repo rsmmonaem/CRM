@@ -58,7 +58,7 @@ watch([filterUserId, fromDate, toDate], () => {
                 <div class="cards">
                     <div class="card blue">Total Assign Lead<div class="number">{{ metrics.totalAssignLead }}</div></div>
                     <div class="card orange">Total Call<div class="number">{{ metrics.totalCall }}</div></div>
-                    <div class="card yellow">Pending Call<div class="number">{{ metrics.pendingCall }}</div></div>
+                    <div class="card yellow">Assain Lead Pending<div class="number">{{ metrics.pendingCall }}</div></div>
                     <div class="card purple">Repeat Call<div class="number">{{ metrics.repeatCall }}</div></div>
                     <div class="card green">Total Number Call<div class="number">{{ metrics.totalNumberCall }}</div></div>
                 </div>
