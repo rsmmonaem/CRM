@@ -39,9 +39,16 @@ const form = useForm({
     lead_id: null,
     call_followup_date: new Date().toISOString().split('T')[0],
     call_followup_summary: '',
-    call_status: 'Connected',
+    call_status: '',
     next_call_date: '',
 });
+
+// Watch for callStatuses to set default call_status if empty
+watch(() => props.callStatuses, (newStatuses) => {
+    if (newStatuses && newStatuses.length > 0 && !form.call_status) {
+        form.call_status = newStatuses[0].name;
+    }
+}, { immediate: true });
 
 // Status change form
 const statusForm = useForm({
@@ -54,12 +61,9 @@ watch(() => props.lead, (newLead) => {
         form.lead_id = newLead.id;
         statusForm.status_id = newLead.status_id;
 
-        // Use lead details if available, otherwise fetch via API
-        if (newLead.lead_details && newLead.lead_details.length > 0) {
-            leadDetails.value = newLead.lead_details;
-        } else {
-            fetchLeadDetailsViaAPI(newLead.id);
-        }
+        // Always fetch full history via API to ensure "all history" is shown
+        // and it's sorted correctly (latest to first)
+        fetchLeadDetailsViaAPI(newLead.id);
     } else {
         leadDetails.value = [];
         statusForm.status_id = null;
@@ -71,7 +75,7 @@ watch(() => props.lead, (newLead) => {
 watch(() => props.callDetail, (newCallDetail) => {
     if (newCallDetail) {
         form.call_followup_summary = newCallDetail.call_followup_summary || '';
-        form.call_status = newCallDetail.call_status || 'Connected';
+        form.call_status = newCallDetail.call_status || (props.callStatuses && props.callStatuses.length > 0 ? props.callStatuses[0].name : '');
         form.next_call_date = newCallDetail.next_call_date ? new Date(new Date(newCallDetail.next_call_date).getTime() - (new Date().getTimezoneOffset() * 60000)).toISOString().slice(0, 16) : '';
     }
 }, { immediate: true });
@@ -115,7 +119,7 @@ const updateStatus = () => {
         return;
     }
 
-    statusForm.put(route('leads.update', props.lead.id), {
+    statusForm.put(route('leads.update-status', props.lead.id), {
         onSuccess: () => {
             // Update the lead prop to reflect the new status
             if (props.lead) {
@@ -550,12 +554,12 @@ onUnmounted(() => {
                         <!-- Right Column: Call History -->
                         <div class="space-y-4">
                             <h4 class="text-md font-medium text-gray-900 dark:text-white border-b border-gray-200 dark:border-gray-600 pb-2">
-                                Latest Call History
+                                Call History
                             </h4>
 
-                            <div v-if="leadDetails && leadDetails.length > 0" class="space-y-3">
+                            <div v-if="leadDetails && leadDetails.length > 0" class="space-y-3 max-h-[500px] overflow-y-auto pr-2 custom-scrollbar">
                                 <div
-                                    v-for="(detail, index) in leadDetails.slice(0, 3)"
+                                    v-for="(detail, index) in leadDetails"
                                     :key="detail.id"
                                     class="border border-gray-200 dark:border-gray-600 rounded-lg p-4 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
                                     :class="{ 'bg-blue-50 dark:bg-blue-900 border-blue-200 dark:border-blue-700': index === 0 }"

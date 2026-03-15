@@ -64,7 +64,8 @@ class CrDashboardController extends Controller
         $pendingQuery = (clone $leadQuery)->whereHas('leadDetails', function($q) use ($today) {
             $q->whereDate('next_call_date', '<', $today);
         });
-        $pendingCallCount = $pendingQuery->count();
+        // $pendingCallCount = $pendingQuery->count();
+        $pendingCallCount = $totalAssignLeadCount-$totalCallCount;
 
         // Today Followup (Today's Call): The NEXT call date is TODAY
         $todayFollowupQuery = (clone $leadQuery)->whereHas('leadDetails', function($q) use ($today) {
@@ -115,7 +116,7 @@ class CrDashboardController extends Controller
         $todayVisitCount = (clone $visitedLeadsQuery)->whereDate('updated_at', $today)->where('status_id', 11)->count();
         $totalVisitCount = (clone $visitedLeadsQuery)->where('status_id', 11)->count();
 
-        $users = User::where('role', 'user')->get();
+        $users = User::select('id', 'name')->get();
 
         return Inertia::render('CrDashboard', [
             'metrics' => [

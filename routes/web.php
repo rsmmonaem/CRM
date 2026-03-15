@@ -54,6 +54,7 @@ Route::middleware('auth')->group(function () {
     Route::get('leads/{lead}', [LeadController::class, 'show'])->name('leads.show')->middleware('permission:leads,view');
     Route::get('leads/{lead}/edit', [LeadController::class, 'edit'])->name('leads.edit')->middleware('permission:leads,edit');
     Route::put('leads/{lead}', [LeadController::class, 'update'])->name('leads.update')->middleware('permission:leads,edit');
+    Route::put('leads/{lead}/status', [LeadController::class, 'updateStatus'])->name('leads.update-status')->middleware('permission:leads,edit');
     Route::delete('leads/{lead}', [LeadController::class, 'destroy'])->name('leads.destroy')->middleware('permission:leads,delete');
 
     // Call Log routes

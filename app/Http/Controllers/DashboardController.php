@@ -23,7 +23,7 @@ class DashboardController extends Controller
         $services = Cache::remember('services_list', 3600, fn() => Service::all());
         $statuses = Cache::remember('lead_statuses_list', 3600, fn() => Status::where('type', 'lead')->get());
         $call_statuses = Cache::remember('call_statuses_list', 3600, fn() => Status::where('type', 'call')->get());
-        $modalUsers = Cache::remember('users_list', 3600, fn() => User::where('role', 'user')->select('id', 'name')->get());
+        $modalUsers = Cache::remember('users_list', 3600, fn() => User::select('id', 'name')->get());
 
         // 2. Optimized Dashboard Queries using latestLeadDetail
         $todaysCallsQuery = Lead::with(['service', 'status', 'assignedUser', 'latestLeadDetail'])
@@ -187,13 +187,12 @@ class DashboardController extends Controller
             'leads_by_status' => $leads->groupBy('status.name')->map->count(),
         ];
 
-        // Get all users for admin filter
-        $users = User::where('role', 'user')->get();
+        $users = User::select('id', 'name')->get();
 
         // Get services and statuses for the new lead modal
         $services = Service::all();
         $statuses = Status::all();
-        $modalUsers = User::where('role', 'user')->get();
+        $modalUsers = User::select('id', 'name')->get();
 
         return Inertia::render('Dashboard', [
             'todaysCalls' => $todaysCalls,

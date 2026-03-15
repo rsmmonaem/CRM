@@ -64,20 +64,10 @@ watch([filterUserId, fromDate, toDate], () => {
                 </div>
             </div>
 
-            <div class="section">
-                <div class="section-title">CRM Lead Call Result Summary</div>
 
-                <div class="cards" v-if="callResultSummary.length > 0">
-                    <div v-for="(status, index) in callResultSummary" :key="index" :class="['card', status.color]">
-                        {{ status.name }}
-                        <div class="number">{{ status.count }}</div>
-                    </div>
-                </div>
-                <div v-else class="text-gray-500 mt-2">No call statuses found in database.</div>
-            </div>
 
             <div class="section">
-                <div class="section-title">Reach Call Details [From Lead]</div>
+                <div class="section-title">Crm Lead Result Summery</div>
 
                 <div class="cards" v-if="leadResultSummary.length > 0">
                     <div v-for="(status, index) in leadResultSummary" :key="index" :class="['card', status.color]">
@@ -86,6 +76,18 @@ watch([filterUserId, fromDate, toDate], () => {
                     </div>
                 </div>
                 <div v-else class="text-gray-500 mt-2">No lead statuses found in database.</div>
+            </div>
+
+            <div class="section">
+                <div class="section-title">CRM Call Result Summary</div>
+
+                <div class="cards" v-if="callResultSummary.length > 0">
+                    <div v-for="(status, index) in callResultSummary" :key="index" :class="['card', status.color]">
+                        {{ status.name }}
+                        <div class="number">{{ status.count }}</div>
+                    </div>
+                </div>
+                <div v-else class="text-gray-500 mt-2">No call statuses found in database.</div>
             </div>
 
             <div class="section">

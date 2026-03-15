@@ -23,6 +23,9 @@ class DatabaseSeeder extends Seeder
 
         // Seed admin user
         $this->call(AdminUserSeeder::class);
+
+        // Seed call statuses
+        $this->call(CallStatusSeeder::class);
         
         // // Create admin user
         // $admin = User::factory()->create([

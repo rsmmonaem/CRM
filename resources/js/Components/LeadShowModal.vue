@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed } from 'vue';
+import { ref, computed, watch } from 'vue';
 import { router } from '@inertiajs/vue3';
 import EditLeadModal from './EditLeadModal.vue';
 import CallModal from './CallModal.vue';
@@ -17,6 +17,39 @@ const props = defineProps({
 });
 
 const emit = defineEmits(['close']);
+
+const fullLeadDetails = ref([]);
+
+// Function to fetch full lead history via API
+const fetchFullHistory = async (leadId) => {
+    if (!leadId) return;
+    try {
+        const response = await fetch(`/api/leads/${leadId}/call-history-public`);
+        if (response.ok) {
+            const data = await response.json();
+            fullLeadDetails.value = data.lead_details || [];
+        }
+    } catch (error) {
+        console.error('Error fetching full history:', error);
+    }
+};
+
+// Watch for lead prop changes to trigger fetch
+watch(() => props.lead, (newLead) => {
+    if (newLead?.id && props.show) {
+        // Initialize with what we have
+        fullLeadDetails.value = newLead.lead_details || [];
+        // Fetch full history to be sure
+        fetchFullHistory(newLead.id);
+    }
+}, { immediate: true });
+
+// Also watch 'show' prop
+watch(() => props.show, (isShown) => {
+    if (isShown && props.lead?.id) {
+        fetchFullHistory(props.lead.id);
+    }
+});
 
 const closeModal = () => {
     emit('close');
@@ -258,16 +291,18 @@ const formatEmail = (email) => {
                 </div>
 
                 <!-- Call History -->
-                <div v-if="lead?.lead_details && lead.lead_details.length > 0" class="bg-gray-50 dark:bg-gray-700/50 p-4 rounded-lg">
+                <div v-if="fullLeadDetails && fullLeadDetails.length > 0" class="bg-gray-50 dark:bg-gray-700/50 p-4 rounded-lg">
                     <div class="flex items-center space-x-2 mb-3">
                         <svg class="w-5 h-5 text-gray-600 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                         </svg>
                         <h4 class="text-sm font-semibold text-gray-900 dark:text-white">Call History</h4>
                     </div>
-                    <div class="space-y-3 max-h-60 overflow-y-auto">
-                        <div v-for="(detail, index) in lead.lead_details.slice().reverse()" :key="detail.id"
-                             class="bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 p-3 rounded-lg shadow-sm">
+                    <div class="space-y-3 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
+                        <div v-for="(detail, index) in fullLeadDetails" :key="detail.id"
+                             class="bg-white dark:bg-gray-100 border border-gray-200 dark:border-gray-600 p-3 rounded-lg shadow-sm"
+                             :class="{ 'bg-blue-50 dark:bg-blue-900/10 border-blue-200 dark:border-blue-800': index === 0 }"
+                        >
 
                             <!-- Call Header -->
                             <div class="flex justify-between items-start mb-2">
@@ -280,7 +315,7 @@ const formatEmail = (email) => {
                                     </p>
                                 </div>
                                 <span class="text-xs bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 px-2 py-1 rounded-full">
-                                    #{{ lead.lead_details.length - index }}
+                                    #{{ fullLeadDetails.length - index }}
                                 </span>
                             </div>
 

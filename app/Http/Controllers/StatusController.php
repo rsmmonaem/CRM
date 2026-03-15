@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use App\Models\Status;
+use Illuminate\Support\Facades\Cache;
 
 class StatusController extends Controller
 {
@@ -43,6 +44,10 @@ class StatusController extends Controller
             'type' => $request->type,
             'created_by' => auth()->id(),
         ]);
+        
+        // Clear caches
+        Cache::forget('lead_statuses_list');
+        Cache::forget('call_statuses_list');
         
         return redirect()->route('statuses.index')->with('success', 'Status created successfully.');
     }
@@ -84,6 +89,10 @@ class StatusController extends Controller
             'type' => $request->type,
         ]);
         
+        // Clear caches
+        Cache::forget('lead_statuses_list');
+        Cache::forget('call_statuses_list');
+        
         return redirect()->route('statuses.index')->with('success', 'Status updated successfully.');
     }
 
@@ -98,6 +107,10 @@ class StatusController extends Controller
         }
         
         $status->delete();
+        
+        // Clear caches
+        Cache::forget('lead_statuses_list');
+        Cache::forget('call_statuses_list');
         
         return redirect()->route('statuses.index')->with('success', 'Status deleted successfully.');
     }

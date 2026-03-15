@@ -13,9 +13,16 @@ const emit = defineEmits(['close']);
 const form = useForm({
     call_followup_date: new Date().toISOString().split('T')[0],
     call_followup_summary: '',
-    call_status: 'Connected',
+    call_status: '',
     next_call_date: '',
 });
+
+// Watch for callStatuses to set default call_status if empty and no callDetail
+watch(() => props.callStatuses, (newStatuses) => {
+    if (newStatuses && newStatuses.length > 0 && !form.call_status && !props.callDetail) {
+        form.call_status = newStatuses[0].name;
+    }
+}, { immediate: true });
 
 // Watch for callDetail prop changes and update form
 watch(() => props.callDetail, (newCallDetail) => {
@@ -27,7 +34,10 @@ watch(() => props.callDetail, (newCallDetail) => {
 
         form.call_followup_summary = newCallDetail.call_followup_summary || '';
 
-        form.call_status = newCallDetail.call_status || 'Connected';
+        form.call_status = newCallDetail.call_status || null;
+        if (!form.call_status && props.callStatuses && props.callStatuses.length > 0) {
+            form.call_status = props.callStatuses[0].name;
+        }
 
         form.next_call_date = newCallDetail.next_call_date ?
             new Date(new Date(newCallDetail.next_call_date).getTime() - (new Date().getTimezoneOffset() * 60000)).toISOString().slice(0, 16) : '';
@@ -107,11 +117,11 @@ const submitEdit = () => {
 
                                 <!-- Call Status -->
                                 <div>
-                                    <label for="edit_call_status" class="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                                    <label for="call_status" class="block text-sm font-medium text-gray-700 dark:text-gray-300">
                                         Call Status *
                                     </label>
                                     <select
-                                        id="edit_call_status"
+                                        id="call_status"
                                         v-model="form.call_status"
                                         class="mt-1 block w-full border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
                                         required

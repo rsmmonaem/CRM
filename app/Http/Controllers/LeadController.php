@@ -188,7 +188,7 @@ class LeadController extends Controller
             'statuses' => Status::where('type', 'lead')->get(),
             'call_statuses' => Status::where('type', 'call')->get(),
             'services' => \App\Models\Service::all(),
-            'users' => \App\Models\User::where('role', 'user')->get(),
+            'users' => \App\Models\User::select('id', 'name')->get(),
         ]);
     }
 
@@ -206,7 +206,7 @@ class LeadController extends Controller
 
         $services = Service::all();
         $statuses = Status::where('type', 'lead')->get();
-        $users = User::where('role', 'user')->get();
+        $users = User::select('id', 'name')->get();
 
         return Inertia::render('Leads/Edit', [
             'lead' => $lead,
@@ -279,6 +279,33 @@ class LeadController extends Controller
         Cache::forget('dashboard_stats_' . auth()->id());
 
         return back()->with('success', 'Lead updated successfully!');
+    }
+
+    /**
+     * Update the lead status.
+     */
+    public function updateStatus(Request $request, Lead $lead)
+    {
+        $user = auth()->user();
+
+        // Check if user can update this lead
+        if (!$user->isAdmin() && $lead->assigned_user_id !== $user->id) {
+            abort(403, 'Unauthorized');
+        }
+
+        $request->validate([
+            'status_id' => 'required|exists:statuses,id',
+        ]);
+
+        $lead->update([
+            'status_id' => $request->status_id,
+        ]);
+
+        // Invalidate dashboard cache
+        Cache::forget('dashboard_stats_' . $lead->assigned_user_id);
+        Cache::forget('dashboard_stats_' . auth()->id());
+
+        return back()->with('success', 'Lead status updated successfully!');
     }
 
     /**
