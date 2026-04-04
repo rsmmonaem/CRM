@@ -71,7 +71,7 @@ class LeadController extends Controller
         $statusCounts = (clone $statsQuery)->selectRaw('status_id, count(*) as total')->groupBy('status_id')->pluck('total', 'status_id');
         $userCounts = (clone $statsQuery)->selectRaw('assigned_user_id, count(*) as total')->groupBy('assigned_user_id')->pluck('total', 'assigned_user_id');
 
-        $leads = $leadsQuery->orderBy('created_at', 'desc')->paginate(50)->withQueryString();
+        $leads = $leadsQuery->withExists('leadDetails')->orderBy('created_at', 'desc')->paginate(50)->withQueryString();
 
         // 3. Map latestLeadDetail to lead_details array for frontend compatibility
         $leads->getCollection()->transform(function($lead) {
@@ -79,6 +79,7 @@ class LeadController extends Controller
             $lead->setRelation('leadDetails', collect($details));
             $lead->makeVisible(['lead_details']);
             $lead->setRelation('lead_details', $lead->leadDetails);
+            $lead->is_call = $lead->lead_details_exists;
             return $lead;
         });
 

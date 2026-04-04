@@ -697,6 +697,11 @@ const saveDefaultView = (mode) => {
                             <div class="truncate"><strong>Company:</strong> {{ lead.company_name || '-' }}</div>
                             <div class="truncate"><strong>Service:</strong> {{ lead.service.name || '-' }}</div>
                             <div class="truncate"><strong>Assigned:</strong> {{ lead.assigned_user.name || '-' }}</div>
+                            <div class="truncate"><strong>Is Call:</strong> 
+                                <span :class="lead.is_call ? 'text-green-600 dark:text-green-400 font-semibold' : 'text-red-600 dark:text-red-400 font-semibold'">
+                                    {{ lead.is_call ? 'Yes' : 'No' }}
+                                </span>
+                            </div>
                             <div class="truncate"><strong>Created:</strong> {{ new Date(lead.created_at).toLocaleDateString() }}</div>
                         </div>
 
@@ -742,6 +747,7 @@ const saveDefaultView = (mode) => {
                                      <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[120px]">Service</th>
                                      <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[100px]">Status</th>
                                      <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[120px]">Assigned</th>
+                                     <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[100px]">Is Call</th>
                                      <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[120px]">Actions</th>
                                 </tr>
                             </thead>
@@ -778,6 +784,11 @@ const saveDefaultView = (mode) => {
                                     </td>
                                     <td class="px-6 py-4   text-sm text-gray-500 dark:text-gray-400">
                                         {{ lead.assigned_user.name }}
+                                    </td>
+                                    <td class="px-6 py-4 text-center">
+                                        <span :class="lead.is_call ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' : 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'" class="px-2.5 py-1 text-[10px] font-bold rounded-full uppercase tracking-wider">
+                                            {{ lead.is_call ? 'Yes' : 'No' }}
+                                        </span>
                                     </td>
                                     <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium space-x-2">
                                         <button @click="openCallModal(lead)" class="text-blue-600 hover:text-blue-900 dark:text-blue-400 dark:hover:text-blue-300">Call</button>

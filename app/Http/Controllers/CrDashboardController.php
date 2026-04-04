@@ -35,7 +35,8 @@ class CrDashboardController extends Controller
                 $q->where('assigned_user_id', $user->id);
             });
         }
-
+        $totalAssignLead = clone $leadQuery;// for intotal no date will filter 
+        $intotalLeadDetail = clone $leadDetailQuery; // for intotal calls no date filter 
         if ($fromDate && $toDate) {
             $leadQuery->whereBetween('created_at', [$fromDate, Carbon::parse($toDate)->endOfDay()]);
             $leadDetailQuery->whereBetween('created_at', [$fromDate, Carbon::parse($toDate)->endOfDay()]);
@@ -45,27 +46,36 @@ class CrDashboardController extends Controller
         // Here we use whereHas to only count the leads that match the condition for the latest activity
         $today = Carbon::today();
         
-        $totalAssignLead = clone $leadQuery;
         
-        // Leads that have been called at least once
-        $calledLeadsQuery = (clone $leadQuery)->whereHas('leadDetails');
+        
+        // Unique leads that have been called at least once
+        $uniqueLeadsCalledCount = (clone $leadQuery)->whereHas('leadDetails')->count();
 
         // Status 11 = "Office Visited" (based on your leads app structure)
         $visitedLeadsQuery = clone $leadQuery;
 
         $totalAssignLeadCount = $totalAssignLead->count();
-        $totalCallCount = $calledLeadsQuery->count();
+        $todaytotalAssignLeadCount = (clone $leadQuery)->whereDate('created_at', $today)->count();
         
-        // Total number of calls (All Lead Details)
-        $totalNumberCallCount = (clone $leadDetailQuery)->count();
-        $repeatCallCount = max(0, $totalNumberCallCount - $totalCallCount);
+        // Today Total Call (number of calls made from date and to date same )
+        if ($fromDate && $toDate) {
+            $todayTotalCallCount = (clone $leadDetailQuery)->count();
+        } else {
+            $todayTotalCallCount = (clone $leadDetailQuery)->whereDate('created_at', $today)->count();
+        }
+        
+        // Intotal Call (All Lead Details)
+        $intotalCallCount = $intotalLeadDetail->count();
+        
+        $repeatCallCount = max(0, $intotalCallCount - $uniqueLeadsCalledCount);
 
         // Pending Call: The NEXT call date has PASSED (before today)
         $pendingQuery = (clone $leadQuery)->whereHas('leadDetails', function($q) use ($today) {
             $q->whereDate('next_call_date', '<', $today);
         });
         $pendingFollowupCount = $pendingQuery->count();
-        $pendingCallCount = $totalAssignLeadCount-$totalCallCount;
+        $intotalPendingCallCount = (clone $totalAssignLead)->doesntHave('leadDetails')->count();
+        $todayPendingCallCount = (clone $leadQuery)->whereDate('created_at', $today)->doesntHave('leadDetails')->count();
 
         // Today Followup (Today's Call): The NEXT call date is TODAY
         $todayFollowupQuery = (clone $leadQuery)->whereHas('leadDetails', function($q) use ($today) {
@@ -120,11 +130,13 @@ class CrDashboardController extends Controller
 
         return Inertia::render('CrDashboard', [
             'metrics' => [
-                'totalAssignLead' => $totalAssignLeadCount,
-                'totalCall' => $totalCallCount,
-                'pendingCall' => $pendingCallCount,
+                'intotalAssignLead' => $totalAssignLeadCount,
+                'intotalPendingCall' => $intotalPendingCallCount,
+                'todaytotalAssignLead' => $todaytotalAssignLeadCount,
+                'todayPendingCall' => $todayPendingCallCount,
+                'todayTotalCall' => $todayTotalCallCount,
+                'intotalCall' => $intotalCallCount,
                 'repeatCall' => $repeatCallCount,
-                'totalNumberCall' => $totalNumberCallCount,
                 'todayFollowup' => $todayFollowupCount,
                 'pendingFollowup' => $pendingFollowupCount,
                 'upcomingCalls' => $upcomingCallsCount,
