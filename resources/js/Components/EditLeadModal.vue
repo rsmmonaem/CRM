@@ -1,6 +1,7 @@
 <script setup>
 import { ref, watch } from 'vue';
 import { useForm, router } from '@inertiajs/vue3';
+import Swal from 'sweetalert2';
 
 const props = defineProps({
     lead: Object,
@@ -45,6 +46,15 @@ const submitLead = () => {
         },
         onError: (errors) => {
             console.error('Validation errors:', errors);
+            
+            if (errors.phone === 'duplicate number ok') {
+                Swal.fire({
+                    title: 'Duplicate Number!',
+                    text: 'A lead with the same last 10 digits already exists.',
+                    icon: 'error',
+                    confirmButtonColor: '#EF4444',
+                });
+            }
         }
     });
 };

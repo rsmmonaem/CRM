@@ -20,10 +20,10 @@ class LeadController extends Controller
         $user = auth()->user();
 
         // 1. Static/Lookup Data (Cached)
-        $services = Cache::remember('services_list', 3600, fn() => Service::all());
-        $statuses = Cache::remember('lead_statuses_list', 3600, fn() => Status::where('type', 'lead')->get());
-        $call_statuses = Cache::remember('call_statuses_list', 3600, fn() => Status::where('type', 'call')->get());
-        $users = Cache::remember('users_list', 3600, fn() => User::select('id', 'name')->get());
+        $services = Cache::remember('services_list', 86400, fn() => Service::all());
+        $statuses = Cache::remember('lead_statuses_list', 86400, fn() => Status::where('type', 'lead')->get());
+        $call_statuses = Cache::remember('call_statuses_list', 86400, fn() => Status::where('type', 'call')->get());
+        $users = Cache::remember('users_list', 86400, fn() => User::select('id', 'name')->get());
 
         // 2. Optimized Lead Query
         $leadsQuery = Lead::with(['service', 'status', 'assignedUser', 'creator', 'latestLeadDetail']);
@@ -63,23 +63,62 @@ class LeadController extends Controller
             $leadsQuery->where('assigned_user_id', $request->input('user'));
         }
 
-        // Calculate stats BEFORE pagination but AFTER filtering
-        $statsQuery = clone $leadsQuery;
+        if ($request->filled('isCall')) {
+            if ($request->input('isCall') === 'yes') {
+                $leadsQuery->whereHas('leadDetails');
+            } else {
+                $leadsQuery->whereDoesntHave('leadDetails');
+            }
+        }
+
+        if ($request->filled('callStatus')) {
+            $leadsQuery->whereHas('latestLeadDetail', function($q) use ($request) {
+                $q->where('call_status', $request->input('callStatus'));
+            });
+        }
+
+        // Calculate stats
+        $hasFilters = $request->anyFilled(['search', 'service', 'status', 'dateFrom', 'dateTo', 'user', 'isCall', 'callStatus']);
         
-        $totalLeads = $statsQuery->count();
-        $serviceCounts = (clone $statsQuery)->selectRaw('service_id, count(*) as total')->groupBy('service_id')->pluck('total', 'service_id');
-        $statusCounts = (clone $statsQuery)->selectRaw('status_id, count(*) as total')->groupBy('status_id')->pluck('total', 'status_id');
-        $userCounts = (clone $statsQuery)->selectRaw('assigned_user_id, count(*) as total')->groupBy('assigned_user_id')->pluck('total', 'assigned_user_id');
+        if (!$hasFilters) {
+            $stats = Cache::remember('leads_global_stats_' . ($user->isAdmin() ? 'admin' : 'user_' . $user->id), 300, function() use ($leadsQuery) {
+                $q = clone $leadsQuery;
+                return [
+                    'total' => $q->count(),
+                    'services' => (clone $q)->selectRaw('service_id, count(*) as total')->groupBy('service_id')->pluck('total', 'service_id'),
+                    'statuses' => (clone $q)->selectRaw('status_id, count(*) as total')->groupBy('status_id')->pluck('total', 'status_id'),
+                    'users' => (clone $q)->selectRaw('assigned_user_id, count(*) as total')->groupBy('assigned_user_id')->pluck('total', 'assigned_user_id'),
+                ];
+            });
+        } else {
+            $statsQuery = clone $leadsQuery;
+            $stats = [
+                'total' => $statsQuery->count(),
+                'services' => (clone $statsQuery)->selectRaw('service_id, count(*) as total')->groupBy('service_id')->pluck('total', 'service_id'),
+                'statuses' => (clone $statsQuery)->selectRaw('status_id, count(*) as total')->groupBy('status_id')->pluck('total', 'status_id'),
+                'users' => (clone $statsQuery)->selectRaw('assigned_user_id, count(*) as total')->groupBy('assigned_user_id')->pluck('total', 'assigned_user_id'),
+            ];
+        }
 
-        $leads = $leadsQuery->withExists('leadDetails')->orderBy('created_at', 'desc')->paginate(50)->withQueryString();
+        $totalLeads = $stats['total'];
+        $perPageInput = $request->input('per_page', 50);
+        
+        if ($perPageInput === 'all') {
+            $perPage = $totalLeads > 0 ? min($totalLeads, 1000) : 50;
+        } else {
+            $perPage = is_numeric($perPageInput) ? (int)$perPageInput : 50;
+            if ($perPage <= 0) $perPage = 50;
+        }
 
-        // 3. Map latestLeadDetail to lead_details array for frontend compatibility
+        $leads = $leadsQuery->withExists('leadDetails')
+            ->orderBy('created_at', 'desc')
+            ->paginate($perPage)
+            ->appends($request->all());
+
+        // Map data for frontend compatibility
         $leads->getCollection()->transform(function($lead) {
-            $details = $lead->latestLeadDetail ? [$lead->latestLeadDetail] : [];
-            $lead->setRelation('leadDetails', collect($details));
-            $lead->makeVisible(['lead_details']);
-            $lead->setRelation('lead_details', $lead->leadDetails);
-            $lead->is_call = $lead->lead_details_exists;
+            $lead->is_call = (bool)$lead->lead_details_exists;
+            $lead->lead_details = $lead->latestLeadDetail ? [$lead->latestLeadDetail] : [];
             return $lead;
         });
 
@@ -90,13 +129,118 @@ class LeadController extends Controller
             'statuses' => $statuses,
             'call_statuses' => $call_statuses,
             'users' => $users,
-            'filters' => $request->only(['search', 'service', 'status', 'dateFrom', 'dateTo', 'user']),
+            'filters' => $request->only(['search', 'service', 'status', 'dateFrom', 'dateTo', 'user', 'per_page', 'isCall', 'callStatus']),
+            'stats' => $stats
+        ]);
+    }
+
+    /**
+     * Display leads with duplicate phone numbers (last 6 digits).
+     */
+    public function duplicates(Request $request)
+    {
+        $user = auth()->user();
+
+        // 1. Static/Lookup Data (Cached)
+        $services = Cache::remember('services_list', 3600, fn() => Service::all());
+        $statuses = Cache::remember('lead_statuses_list', 3600, fn() => Status::where('type', 'lead')->get());
+        $call_statuses = Cache::remember('call_statuses_list', 3600, fn() => Status::where('type', 'call')->get());
+        $users = Cache::remember('users_list', 3600, fn() => User::select('id', 'name')->get());
+
+        // 2. Optimized Lead Query for duplicates
+        // Find duplicate suffixes (last 10 digits) - Cached for performance
+        $duplicateSuffixes = Cache::remember('leads_duplicate_suffixes', 600, function() {
+            return Lead::selectRaw('RIGHT(phone, 10) as suffix')
+                ->whereNotNull('phone')
+                ->where('phone', '!=', '')
+                ->groupBy('suffix')
+                ->havingRaw('COUNT(*) > 1')
+                ->pluck('suffix');
+        });
+
+        $leadsQuery = Lead::with(['service', 'status', 'assignedUser', 'creator', 'latestLeadDetail']);
+
+        if ($duplicateSuffixes->isEmpty()) {
+            $leadsQuery->where('id', 0); // Return empty results
+        } else {
+            $leadsQuery->whereRaw('RIGHT(phone, 10) IN (' . $duplicateSuffixes->map(fn($s) => "'$s'")->implode(',') . ')');
+        }
+
+        if (!$user->isAdmin()) {
+            $leadsQuery->where('assigned_user_id', $user->id);
+        }
+
+        // Apply filters
+        if ($request->filled('search')) {
+            $search = $request->input('search');
+            $leadsQuery->where(function($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%")
+                  ->orWhere('phone', 'like', "%{$search}%")
+                  ->orWhere('email', 'like', "%{$search}%")
+                  ->orWhere('company_name', 'like', "%{$search}%");
+            });
+        }
+
+        if ($request->filled('service')) {
+            $leadsQuery->where('service_id', $request->input('service'));
+        }
+
+        if ($request->filled('status')) {
+            $leadsQuery->where('status_id', $request->input('status'));
+        }
+
+        if ($request->filled('dateFrom')) {
+            $leadsQuery->whereDate('created_at', '>=', $request->input('dateFrom'));
+        }
+
+        if ($request->filled('dateTo')) {
+            $leadsQuery->whereDate('created_at', '<=', $request->input('dateTo'));
+        }
+
+        if ($user->isAdmin() && $request->filled('user')) {
+            $leadsQuery->where('assigned_user_id', $request->input('user'));
+        }
+
+        // Calculate stats
+        $statsQuery = clone $leadsQuery;
+        $totalLeads = $statsQuery->count();
+        
+        $perPageInput = $request->input('per_page', 50);
+        if ($perPageInput === 'all') {
+            $perPage = $totalLeads > 0 ? min($totalLeads, 1000) : 50;
+        } else {
+            $perPage = is_numeric($perPageInput) ? (int)$perPageInput : 50;
+            if ($perPage <= 0) $perPage = 50;
+        }
+
+        $leads = $leadsQuery->withExists('leadDetails')
+            ->orderByRaw('RIGHT(phone, 10)')
+            ->orderBy('created_at', 'desc')
+            ->paginate($perPage)
+            ->appends($request->all());
+
+        // Map data for frontend compatibility
+        $leads->getCollection()->transform(function($lead) {
+            $lead->is_call = (bool)$lead->lead_details_exists;
+            $lead->lead_details = $lead->latestLeadDetail ? [$lead->latestLeadDetail] : [];
+            return $lead;
+        });
+
+        return Inertia::render('Leads/Index', [
+            'leads' => $leads,
+            'user' => $user,
+            'services' => $services,
+            'statuses' => $statuses,
+            'call_statuses' => $call_statuses,
+            'users' => $users,
+            'filters' => $request->only(['search', 'service', 'status', 'dateFrom', 'dateTo', 'user', 'per_page']),
             'stats' => [
                 'total' => $totalLeads,
-                'services' => $serviceCounts,
-                'statuses' => $statusCounts,
-                'users' => $userCounts,
-            ]
+                'services' => (clone $statsQuery)->selectRaw('service_id, count(*) as total')->groupBy('service_id')->pluck('total', 'service_id'),
+                'statuses' => (clone $statsQuery)->selectRaw('status_id, count(*) as total')->groupBy('status_id')->pluck('total', 'status_id'),
+                'users' => (clone $statsQuery)->selectRaw('assigned_user_id, count(*) as total')->groupBy('assigned_user_id')->pluck('total', 'assigned_user_id'),
+            ],
+            'title' => 'Duplicate Number Leads'
         ]);
     }
 
@@ -130,22 +274,19 @@ class LeadController extends Controller
             return back()->withErrors(['contact' => 'Either phone number or email address is required.'])->withInput();
         }
 
-        // Check for duplicates
-        $duplicateQuery = Lead::where(function($query) use ($request) {
-            if ($request->phone) {
-                $query->where('phone', $request->phone);
+        // Check for duplicates (last 10 digits of phone)
+        if ($request->phone) {
+            $cleanPhone = preg_replace('/\D/', '', $request->phone);
+            $suffix = strlen($cleanPhone) >= 10 ? substr($cleanPhone, -10) : $cleanPhone;
+            
+            if (!empty($suffix) && Lead::whereRaw('RIGHT(phone, 10) = ?', [$suffix])->exists()) {
+                return back()->withErrors(['phone' => 'duplicate number ok'])->withInput();
             }
-            if ($request->email) {
-                if ($request->phone) {
-                    $query->orWhere('email', $request->email);
-                } else {
-                    $query->where('email', $request->email);
-                }
-            }
-        });
+        }
 
-        if ($duplicateQuery->exists()) {
-            return back()->withErrors(['duplicate' => 'A lead with this phone or email already exists.'])->withInput();
+        // Check for email duplicates
+        if ($request->email && Lead::where('email', $request->email)->exists()) {
+            return back()->withErrors(['email' => 'A lead with this email already exists.'])->withInput();
         }
 
         Lead::create([
@@ -160,13 +301,20 @@ class LeadController extends Controller
             'created_by' => auth()->id(),
         ]);
 
-        // Invalidate dashboard cache
-        Cache::forget('dashboard_stats_' . auth()->id());
-        if ($request->assigned_user_id != auth()->id()) {
-            Cache::forget('dashboard_stats_' . $request->assigned_user_id);
-        }
+        // Invalidate caches
+        $this->clearLeadCaches();
 
         return redirect()->route('leads.index')->with('success', 'Lead created successfully!');
+    }
+
+    /**
+     * Clear all lead related caches
+     */
+    private function clearLeadCaches()
+    {
+        Cache::forget('leads_duplicate_suffixes');
+        // Clear dashboard stats
+        Cache::flush();
     }
 
     /**
@@ -245,39 +393,26 @@ class LeadController extends Controller
             return back()->withErrors(['contact' => 'Either phone or email is required.'])->withInput();
         }
 
-        // Check for duplicates (excluding current lead)
-        $duplicateQuery = Lead::where('id', '!=', $lead->id)
-            ->where(function($query) use ($request) {
-                if ($request->phone) {
-                    $query->where('phone', $request->phone);
-                }
-                if ($request->email) {
-                    if ($request->phone) {
-                        $query->orWhere('email', $request->email);
-                    } else {
-                        $query->where('email', $request->email);
-                    }
-                }
-            });
-
-        if ($duplicateQuery->exists()) {
-            return back()->withErrors(['duplicate' => 'A lead with this phone or email already exists.'])->withInput();
+        // Check for duplicates (last 10 digits of phone) excluding current lead
+        if ($request->phone) {
+            $cleanPhone = preg_replace('/\D/', '', $request->phone);
+            $suffix = strlen($cleanPhone) >= 10 ? substr($cleanPhone, -10) : $cleanPhone;
+            
+            if (!empty($suffix) && Lead::where('id', '!=', $lead->id)->whereRaw('RIGHT(phone, 10) = ?', [$suffix])->exists()) {
+                return back()->withErrors(['phone' => 'duplicate number ok'])->withInput();
+            }
         }
 
-        $lead->update([
-            'name' => $request->name,
-            'company_name' => $request->company_name,
-            'location' => $request->location,
-            'phone' => $request->phone,
-            'email' => $request->email,
-            'service_id' => $request->service_id,
-            'status_id' => $request->status_id,
-            'assigned_user_id' => $request->assigned_user_id,
-        ]);
+        // Check for email duplicates excluding current lead
+        if ($request->email && Lead::where('id', '!=', $lead->id)->where('email', $request->email)->exists()) {
+            return back()->withErrors(['email' => 'A lead with this email already exists.'])->withInput();
+        }
 
-        // Invalidate dashboard cache
-        Cache::forget('dashboard_stats_' . $lead->assigned_user_id);
-        Cache::forget('dashboard_stats_' . auth()->id());
+        $lead->update($request->only([
+            'name', 'company_name', 'location', 'phone', 'email', 'service_id', 'status_id', 'assigned_user_id'
+        ]));
+
+        $this->clearLeadCaches();
 
         return back()->with('success', 'Lead updated successfully!');
     }
@@ -302,9 +437,7 @@ class LeadController extends Controller
             'status_id' => $request->status_id,
         ]);
 
-        // Invalidate dashboard cache
-        Cache::forget('dashboard_stats_' . $lead->assigned_user_id);
-        Cache::forget('dashboard_stats_' . auth()->id());
+        $this->clearLeadCaches();
 
         return back()->with('success', 'Lead status updated successfully!');
     }
@@ -321,12 +454,8 @@ class LeadController extends Controller
             abort(403, 'Unauthorized');
         }
 
-        $assignedUser = $lead->assigned_user_id;
         $lead->delete();
-
-        // Invalidate dashboard cache
-        Cache::forget('dashboard_stats_' . $assignedUser);
-        Cache::forget('dashboard_stats_' . auth()->id());
+        $this->clearLeadCaches();
 
         return redirect()->route('leads.index')->with('success', 'Lead deleted successfully!');
     }
@@ -352,6 +481,7 @@ class LeadController extends Controller
 
         $count = $query->count();
         $query->delete();
+        $this->clearLeadCaches();
 
         return redirect()->route('leads.index')->with('success', "{$count} leads deleted successfully!");
     }
@@ -425,8 +555,9 @@ class LeadController extends Controller
                 continue;
             }
 
-            // Check for duplicates
-            if (Lead::where('phone', $phone)->exists()) {
+            // Check for duplicates (last 10 digits)
+            $suffix = strlen($phone) >= 10 ? substr($phone, -10) : $phone;
+            if (!empty($suffix) && Lead::whereRaw('RIGHT(phone, 10) = ?', [$suffix])->exists()) {
                 $duplicateCount++;
                 continue;
             }

@@ -27,6 +27,7 @@ const props = defineProps({
     users: Array,
     filters: Object,
     stats: Object,
+    title: String,
 });
 
 const page = usePage();
@@ -104,7 +105,10 @@ const filters = ref({
     status: props.filters?.status || '',
     dateFrom: props.filters?.dateFrom || '',
     dateTo: props.filters?.dateTo || '',
-    user: props.filters?.user || ''
+    user: props.filters?.user || '',
+    per_page: props.filters?.per_page || 50,
+    isCall: props.filters?.isCall || '',
+    callStatus: props.filters?.callStatus || ''
 });
 
 const user = computed(() => page.props.auth.user);
@@ -124,7 +128,7 @@ watch(filters, debounce((newFilters) => {
         }
     }
     
-    router.get(route('leads.index'), query, {
+    router.get(route(route().current()), query, {
         preserveState: true,
         preserveScroll: true,
         replace: true
@@ -143,7 +147,9 @@ const hasActiveFilters = computed(() => {
            filters.value.status ||
            filters.value.dateFrom ||
            filters.value.dateTo ||
-           filters.value.user;
+           filters.value.user ||
+           filters.value.isCall ||
+           filters.value.callStatus;
 });
 
 // Clear all filters
@@ -154,7 +160,10 @@ const clearFilters = () => {
         status: '',
         dateFrom: '',
         dateTo: '',
-        user: ''
+        user: '',
+        per_page: filters.value.per_page,
+        isCall: '',
+        callStatus: ''
     };
 };
 
@@ -317,6 +326,34 @@ const getStatusClass = (statusName) => {
     return 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200';
 };
 
+const getPhoneLast10 = (phone) => {
+    if (!phone) return '';
+    const phoneStr = String(phone).replace(/\D/g, '');
+    return phoneStr.length >= 10 ? phoneStr.slice(-10) : phoneStr;
+};
+ 
+const duplicateLast10Phones = computed(() => {
+    const counts = {};
+    filteredLeads.value.forEach(lead => {
+        const last10 = getPhoneLast10(lead.phone);
+        if (last10) {
+            counts[last10] = (counts[last10] || 0) + 1;
+        }
+    });
+    const duplicates = new Set();
+    for (const [last10, count] of Object.entries(counts)) {
+        if (count > 1) {
+            duplicates.add(last10);
+        }
+    }
+    return duplicates;
+});
+ 
+const isDuplicatePhone = (phone) => {
+    const last10 = getPhoneLast10(phone);
+    return last10 && duplicateLast10Phones.value.has(last10);
+};
+
 const viewMode = ref(props.user?.default_view_mode || 'grid'); // Initialize from DB
 
 const saveDefaultView = (mode) => {
@@ -335,7 +372,7 @@ const saveDefaultView = (mode) => {
             <div class="bg-gradient-to-r from-blue-600 via-purple-600 to-indigo-600 rounded-xl p-8 text-white shadow-xl">
                 <div class="flex flex-col md:flex-row md:items-center md:justify-between space-y-4 md:space-y-0">
                     <div>
-                        <h1 class="text-3xl md:text-4xl font-bold mb-2">Leads Management</h1>
+                        <h1 class="text-3xl md:text-4xl font-bold mb-2">{{ title || 'Leads Management' }}</h1>
                         <p class="text-blue-100 text-lg">Manage and track your leads efficiently</p>
                     </div>
 
@@ -476,11 +513,42 @@ const saveDefaultView = (mode) => {
                     </label>
                     <select
                         v-model="filters.user"
-                        class="w-full border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg shadow-sm focus:ring-indigo-500 focus:border-indigo-500 text-sm"
+                        class="w-full border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg shadow-sm focus:ring-indigo-500 focus:border-indigo-500 text-sm h-10"
                     >
                         <option value="">All Users</option>
                         <option v-for="user in users" :key="user.id" :value="user.id">
                             {{ user.name }} ({{ getUserCount(user.id) }})
+                        </option>
+                    </select>
+                </div>
+
+                <!-- Is Call Filter -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        Is Call
+                    </label>
+                    <select
+                        v-model="filters.isCall"
+                        class="w-full border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg shadow-sm focus:ring-indigo-500 focus:border-indigo-500 text-sm h-10"
+                    >
+                        <option value="">All</option>
+                        <option value="yes">Yes</option>
+                        <option value="no">No</option>
+                    </select>
+                </div>
+
+                <!-- Call Status Filter -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        Call Status
+                    </label>
+                    <select
+                        v-model="filters.callStatus"
+                        class="w-full border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg shadow-sm focus:ring-indigo-500 focus:border-indigo-500 text-sm h-10"
+                    >
+                        <option value="">All Statuses</option>
+                        <option v-for="status in call_statuses" :key="status.id" :value="status.name">
+                            {{ status.name }}
                         </option>
                     </select>
                 </div>
@@ -606,7 +674,19 @@ const saveDefaultView = (mode) => {
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
                         </svg>
                     </button>
-                    <span class="text-sm bg-blue-100 text-blue-700 px-3 py-1 rounded-full">
+                    
+                    <select
+                        v-model="filters.per_page"
+                        class="text-sm border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg shadow-sm focus:ring-indigo-500 focus:border-indigo-500 py-1 pl-2 pr-8 ml-2"
+                    >
+                        <option value="50">50</option>
+                        <option value="100">100</option>
+                        <option value="200">200</option>
+                        <option value="500">500</option>
+                        <option value="all">All</option>
+                    </select>
+
+                    <span class="text-sm bg-blue-100 text-blue-700 px-3 py-1 rounded-full whitespace-nowrap">
                         {{ hasActiveFilters ? `${leads.total} match filter` : `${leads.total} total` }}
                     </span>
                 </div>
@@ -668,7 +748,7 @@ const saveDefaultView = (mode) => {
             <div v-if="filteredLeads.length > 0">
                 <!-- Grid View -->
                 <div v-if="viewMode === 'grid'" class="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-                    <div v-for="lead in filteredLeads" :key="lead.id" class="relative bg-white dark:bg-gray-800 rounded-xl shadow-md hover:shadow-xl dark:hover:shadow-white/20 border border-gray-200 dark:border-gray-600 hover:border-gray-300 dark:hover:border-white/30 transition-all duration-300 p-4 flex flex-col justify-between">
+                    <div v-for="lead in filteredLeads" :key="lead.id" class="relative rounded-xl shadow-md hover:shadow-xl dark:hover:shadow-white/20 border hover:border-gray-300 dark:hover:border-white/30 transition-all duration-300 p-4 flex flex-col justify-between" :class="[isDuplicatePhone(lead.phone) ? 'bg-orange-50 dark:bg-orange-900/30 border-orange-300 dark:border-orange-600' : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-600']">
                         <!-- Selection Checkbox -->
                         <div class="absolute top-4 right-4 z-10">
                             <input
@@ -752,7 +832,7 @@ const saveDefaultView = (mode) => {
                                 </tr>
                             </thead>
                             <tbody class="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-                                <tr v-for="lead in filteredLeads" :key="lead.id" class="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors" :class="{ 'bg-blue-50/50 dark:bg-blue-900/10': selectedIds.includes(lead.id) }">
+                                <tr v-for="lead in filteredLeads" :key="lead.id" class="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors" :class="[{ 'bg-blue-50/50 dark:bg-blue-900/10': selectedIds.includes(lead.id) }, { 'bg-orange-50 dark:bg-orange-900/30': isDuplicatePhone(lead.phone) && !selectedIds.includes(lead.id) }]">
                                     <td class="px-6 py-4">
                                         <input
                                             type="checkbox"

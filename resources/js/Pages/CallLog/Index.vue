@@ -1,17 +1,27 @@
 <script setup>
-import { ref, computed } from 'vue';
+import { ref, computed, watch } from 'vue';
 import { Head, Link, router } from '@inertiajs/vue3';
 import ModernLayout from '@/Layouts/ModernLayout.vue';
 import EditCallModal from '@/Components/EditCallModal.vue';
 import Swal from 'sweetalert2';
 
+// Simple debounce function
+function debounce(func, wait) {
+    let timeout;
+    return function (...args) {
+        clearTimeout(timeout);
+        timeout = setTimeout(() => func(...args), wait);
+    };
+}
+
 const props = defineProps({
-    callLogs: Array,
+    callLogs: Object,
     user: Object,
     services: Array,
     statuses: Array,
     call_statuses: Array,
     users: Array,
+    filters: Object,
 });
 
 const showEditModal = ref(false);
@@ -19,15 +29,33 @@ const editingCallDetail = ref(null);
 
 // Filter state
 const filters = ref({
-    search: '',
-    service: '',
-    status: '', // Lead Status
-    call_status: '', // Interaction Status
-    dateFrom: '',
-    dateTo: '',
-    user: '',
-    log_by: ''
+    search: props.filters?.search || '',
+    service: props.filters?.service || '',
+    status: props.filters?.status || '', // Lead Status
+    call_status: props.filters?.call_status || '', // Interaction Status
+    dateFrom: props.filters?.dateFrom || '',
+    dateTo: props.filters?.dateTo || '',
+    user: props.filters?.user || '',
+    log_by: props.filters?.log_by || '',
+    per_page: props.filters?.per_page || 50
 });
+
+// Watch for filter changes and reload via Inertia
+watch(filters, debounce((newFilters) => {
+    // Only send non-empty values
+    const query = {};
+    for (const key in newFilters) {
+        if (newFilters[key]) {
+            query[key] = newFilters[key];
+        }
+    }
+    
+    router.get(route(route().current()), query, {
+        preserveState: true,
+        preserveScroll: true,
+        replace: true
+    });
+}, 500), { deep: true });
 
 const openEditModal = (callLog) => {
     editingCallDetail.value = callLog;
@@ -120,60 +148,9 @@ const deleteBulk = () => {
     });
 };
 
-// Computed filtered call logs
+// Computed filtered call logs - now just from paginated data
 const filteredCallLogs = computed(() => {
-    let result = [...props.callLogs];
-
-    // Search filter (Lead name, phone, email, company, summary)
-    if (filters.value.search) {
-        const search = filters.value.search.toLowerCase();
-        result = result.filter(log => 
-            log.lead?.name?.toLowerCase().includes(search) ||
-            log.lead?.phone?.toLowerCase().includes(search) ||
-            log.lead?.email?.toLowerCase().includes(search) ||
-            log.lead?.company_name?.toLowerCase().includes(search) ||
-            log.call_followup_summary?.toLowerCase().includes(search)
-        );
-    }
-
-    // Service filter
-    if (filters.value.service) {
-        result = result.filter(log => log.lead?.service_id == filters.value.service);
-    }
-
-    // Lead Status filter
-    if (filters.value.status) {
-        result = result.filter(log => log.lead?.status_id == filters.value.status);
-    }
-    
-    // Call Status filter
-    if (filters.value.call_status) {
-        result = result.filter(log => log.call_status == filters.value.call_status);
-    }
-
-    // Date range filter
-    if (filters.value.dateFrom) {
-        const fromDate = new Date(filters.value.dateFrom);
-        result = result.filter(log => new Date(log.call_followup_date) >= fromDate);
-    }
-
-    if (filters.value.dateTo) {
-        const toDate = new Date(filters.value.dateTo);
-        toDate.setHours(23, 59, 59, 999); // Include the entire day
-        result = result.filter(log => new Date(log.call_followup_date) <= toDate);
-    }
-
-    // User filter (admin only)
-    if (filters.value.user && props.user?.role === 'admin') {
-        result = result.filter(log => log.lead?.assigned_user_id == filters.value.user);
-    }
-
-    // Logs By filter (admin only)
-    if (filters.value.log_by && props.user?.role === 'admin') {
-        result = result.filter(log => log.created_by == filters.value.log_by);
-    }
-
-    return result;
+    return props.callLogs.data || [];
 });
 
 const hasActiveFilters = computed(() => {
@@ -197,14 +174,16 @@ const clearFilters = () => {
         dateFrom: '',
         dateTo: '',
         user: '',
-        log_by: ''
+        log_by: '',
+        per_page: filters.value.per_page
     };
 };
 
 // Get count for specific service
 const getServiceCount = (serviceId) => {
-    if (!serviceId) return props.callLogs.length;
-    return props.callLogs.filter(log => log.lead?.service_id == serviceId).length;
+    if (!serviceId) return props.callLogs.total || 0;
+    // Note: Local counts are not fully accurate with pagination, but we use what we have or could fetch more from backend
+    return 0; // Simplified for now as we use server side stats in Leads/Index but not yet here
 };
 
 // Get count for specific status
@@ -219,34 +198,14 @@ const getUserCount = (userId) => {
     return props.callLogs.filter(log => log.lead?.assigned_user_id == userId).length;
 };
 
-// Get filter statistics
+// Get filter statistics (Simplified as we are now paginated)
 const filterStats = computed(() => {
-    const stats = {
+    return {
         byService: {},
         byStatus: {},
         byCallStatus: {},
         byUser: {}
     };
-
-    props.callLogs.forEach(log => {
-        // Service stats
-        const serviceName = log.lead?.service?.name || 'Unknown';
-        stats.byService[serviceName] = (stats.byService[serviceName] || 0) + 1;
-
-        // Lead Status stats
-        const statusName = log.lead?.status?.name || 'Unknown';
-        stats.byStatus[statusName] = (stats.byStatus[statusName] || 0) + 1;
-
-        // Call Status stats
-        const callStatusName = log.call_status || 'Unknown';
-        stats.byCallStatus[callStatusName] = (stats.byCallStatus[callStatusName] || 0) + 1;
-
-        // User stats
-        const userName = log.lead?.assigned_user?.name || 'Unassigned';
-        stats.byUser[userName] = (stats.byUser[userName] || 0) + 1;
-    });
-
-    return stats;
 });
 
 const getStatusClass = (status) => {
@@ -308,8 +267,8 @@ const saveDefaultView = (mode) => {
 
                     <div class="flex items-center space-x-4">
                         <div class="text-right">
-                            <div class="text-2xl font-bold">{{ hasActiveFilters ? filteredCallLogs.length : callLogs.length }}</div>
-                            <div class="text-green-100 text-sm">Calls Showing</div>
+                            <div class="text-2xl font-bold">{{ callLogs.total }}</div>
+                            <div class="text-green-100 text-sm">Calls Found</div>
                         </div>
                     </div>
                 </div>
@@ -327,7 +286,7 @@ const saveDefaultView = (mode) => {
                 </h3>
                 <div class="flex items-center space-x-3">
                     <span v-if="hasActiveFilters" class="text-sm text-indigo-600 dark:text-indigo-400 font-medium">
-                        {{ filteredCallLogs.length }} of {{ callLogs.length }} calls
+                        {{ callLogs.total }} calls found
                     </span>
                     <button
                         v-if="hasActiveFilters"
@@ -343,7 +302,7 @@ const saveDefaultView = (mode) => {
             </div>
 
             <!-- Filter Grid -->
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-8 gap-4">
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
                 <!-- Search Filter -->
                 <div class="xl:col-span-2">
                     <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
@@ -621,8 +580,19 @@ const saveDefaultView = (mode) => {
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
                         </svg>
                     </button>
+                    <select
+                        v-model="filters.per_page"
+                        class="text-sm border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg shadow-sm focus:ring-indigo-500 focus:border-indigo-500 py-1 pl-2 pr-8 ml-2"
+                    >
+                        <option value="50">50</option>
+                        <option value="100">100</option>
+                        <option value="200">200</option>
+                        <option value="500">500</option>
+                        <option value="all">All</option>
+                    </select>
+
                     <span class="text-sm bg-green-100 text-green-700 px-3 py-1 rounded-full">
-                        {{ hasActiveFilters ? `${filteredCallLogs.length} of ${callLogs.length}` : `${callLogs.length} total` }}
+                        {{ hasActiveFilters ? `${callLogs.total} match filter` : `${callLogs.total} total` }}
                     </span>
                 </div>
             </div>
@@ -797,6 +767,50 @@ const saveDefaultView = (mode) => {
                                 </tr>
                             </tbody>
                         </table>
+                    </div>
+                </div>
+
+                <!-- Pagination Details -->
+                <div v-if="callLogs.links && callLogs.links.length > 3" class="mt-6 flex items-center justify-between">
+                    <div class="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
+                        <div>
+                            <p class="text-sm text-gray-700 dark:text-gray-300">
+                                Showing
+                                <span class="font-medium">{{ callLogs.from }}</span>
+                                to
+                                <span class="font-medium">{{ callLogs.to }}</span>
+                                of
+                                <span class="font-medium">{{ callLogs.total }}</span>
+                                results
+                            </p>
+                        </div>
+                        <div>
+                            <nav class="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
+                                <template v-for="(link, key) in callLogs.links" :key="key">
+                                    <Link v-if="link.url" :href="link.url"
+                                        v-html="link.label"
+                                        class="relative inline-flex items-center px-4 py-2 border text-sm font-medium"
+                                        :class="[
+                                            link.active 
+                                            ? 'z-10 bg-green-50 border-green-500 text-green-600 dark:bg-green-900 dark:border-green-500 dark:text-green-200' 
+                                            : 'bg-white border-gray-300 text-gray-500 hover:bg-gray-50 dark:bg-gray-800 dark:border-gray-600 dark:text-gray-400 dark:hover:bg-gray-700',
+                                            key === 0 ? 'rounded-l-md' : '',
+                                            key === callLogs.links.length - 1 ? 'rounded-r-md' : ''
+                                        ]"
+                                        preserve-scroll
+                                    />
+                                    <span v-else 
+                                        v-html="link.label"
+                                        class="relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-400 dark:bg-gray-800 dark:border-gray-600 dark:text-gray-500 cursor-not-allowed"
+                                        :class="[
+                                            key === 0 ? 'rounded-l-md' : '',
+                                            key === callLogs.links.length - 1 ? 'rounded-r-md' : ''
+                                        ]"
+                                    >
+                                    </span>
+                                </template>
+                            </nav>
+                        </div>
                     </div>
                 </div>
             </div>

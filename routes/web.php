@@ -48,6 +48,7 @@ Route::middleware('auth')->group(function () {
 
     // Lead routes with proper permission middleware
     Route::get('leads', [LeadController::class, 'index'])->name('leads.index')->middleware('permission:leads,view');
+    Route::get('leads/duplicates', [LeadController::class, 'duplicates'])->name('leads.duplicates')->middleware('permission:leads,view');
     Route::post('leads/bulk-destroy', [LeadController::class, 'bulkDestroy'])->name('leads.bulk-destroy')->middleware('permission:leads,delete');
     Route::post('leads', [LeadController::class, 'store'])->name('leads.store')->middleware('permission:leads,create');
     Route::post('leads/import', [LeadController::class, 'import'])->name('leads.import')->middleware('permission:leads,create');
