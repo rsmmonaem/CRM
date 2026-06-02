@@ -1,6 +1,7 @@
 <script setup>
 import { ref, watch, onUnmounted } from 'vue';
 import { useForm, router } from '@inertiajs/vue3';
+import axios from 'axios';
 
 const props = defineProps({
     lead: Object,
@@ -22,14 +23,8 @@ const fetchLeadDetailsViaAPI = async (leadId) => {
     if (!leadId) return;
 
     try {
-        const response = await fetch(`/api/leads/${leadId}/call-history-public`);
-
-        if (response.ok) {
-            const data = await response.json();
-            leadDetails.value = data.lead_details || [];
-        } else {
-            leadDetails.value = [];
-        }
+        const response = await axios.get(`/api/leads/${leadId}/call-history-public`);
+        leadDetails.value = response.data.lead_details || [];
     } catch (error) {
         leadDetails.value = [];
     }
@@ -140,55 +135,39 @@ const initiateCall = async () => {
     }
 
     try {
-        // Get CSRF token with fallback
-        const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
-
-        const response = await fetch('/api/call-trackings', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRF-TOKEN': csrfToken,
-                'X-Requested-With': 'XMLHttpRequest'
-            },
-            credentials: 'same-origin',
-            body: JSON.stringify({
-                lead_id: props.lead.id,
-                phone_number: props.lead.phone,
-                device_type: 'web',
-                is_auto_dialed: true,
-                lead_detail_id: props.callDetail?.id || null // Link to existing LeadDetail if available
-            })
+        const response = await axios.post('/api/call-trackings', {
+            lead_id: props.lead.id,
+            phone_number: props.lead.phone,
+            device_type: 'web',
+            is_auto_dialed: true,
+            lead_detail_id: props.callDetail?.id || null // Link to existing LeadDetail if available
         });
 
-        if (response.ok) {
-            const data = await response.json();
-            callTracking.value = data.call_tracking;
-            isCallActive.value = true;
+        const data = response.data;
+        callTracking.value = data.call_tracking;
+        isCallActive.value = true;
 
-            // Start call timer
-            startCallTimer();
+        // Start call timer
+        startCallTimer();
 
-            // Send notification to Android app
-            await notifyAndroidApp(data.call_tracking);
+        // Send notification to Android app
+        await notifyAndroidApp(data.call_tracking);
 
-            // Auto-dial functionality (fallback for web browsers)
-            const phoneNumber = props.lead.phone.replace(/\D/g, ''); // Remove non-digits
-            const telLink = `tel:${phoneNumber}`;
+        // Auto-dial functionality (fallback for web browsers)
+        const phoneNumber = props.lead.phone.replace(/\D/g, ''); // Remove non-digits
+        const telLink = `tel:${phoneNumber}`;
 
-            // Create a temporary link and click it to initiate the call
-            const link = document.createElement('a');
-            link.href = telLink;
-            link.click();
+        // Create a temporary link and click it to initiate the call
+        const link = document.createElement('a');
+        link.href = telLink;
+        link.click();
 
-            // Update call status to ringing
-            updateCallStatus('ringing');
-        } else {
-            const error = await response.json();
-            alert('Failed to initiate call tracking: ' + (error.message || 'Unknown error'));
-        }
+        // Update call status to ringing
+        updateCallStatus('ringing');
     } catch (error) {
         console.error('Error initiating call:', error);
-        alert('Failed to initiate call tracking');
+        const errorMessage = error.response?.data?.message || error.message || 'Unknown error';
+        alert('Failed to initiate call tracking: ' + errorMessage);
     }
 };
 
@@ -196,31 +175,17 @@ const updateCallStatus = async (status, summary = null, nextCallDate = null) => 
     if (!callTracking.value?.id) return;
 
     try {
-        // Get CSRF token with fallback
-        const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
-
-        const response = await fetch(`/api/call-trackings/${callTracking.value.id}`, {
-            method: 'PUT',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRF-TOKEN': csrfToken,
-                'X-Requested-With': 'XMLHttpRequest'
-            },
-            credentials: 'same-origin',
-            body: JSON.stringify({
-                call_status: status,
-                call_summary: summary,
-                next_call_date: nextCallDate
-            })
+        const response = await axios.put(`/api/call-trackings/${callTracking.value.id}`, {
+            call_status: status,
+            call_summary: summary,
+            next_call_date: nextCallDate
         });
 
-        if (response.ok) {
-            const data = await response.json();
-            callTracking.value = data.call_tracking;
+        const data = response.data;
+        callTracking.value = data.call_tracking;
 
-            if (status === 'completed' || status === 'cancelled') {
-                endCall();
-            }
+        if (status === 'completed' || status === 'cancelled') {
+            endCall();
         }
     } catch (error) {
         console.error('Error updating call status:', error);
@@ -271,31 +236,14 @@ const cancelCall = () => {
 // Function to notify Android app about the call
 const notifyAndroidApp = async (callTracking) => {
     try {
-        // Get CSRF token with fallback
-        const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
-
-        const response = await fetch('/api/call-notifications/notify', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRF-TOKEN': csrfToken,
-                'X-Requested-With': 'XMLHttpRequest'
-            },
-            credentials: 'same-origin',
-            body: JSON.stringify({
-                user_id: callTracking.user_id,
-                lead_id: callTracking.lead_id,
-                phone_number: props.lead.phone,
-                call_id: callTracking.call_id
-            })
+        const response = await axios.post('/api/call-notifications/notify', {
+            user_id: callTracking.user_id,
+            lead_id: callTracking.lead_id,
+            phone_number: props.lead.phone,
+            call_id: callTracking.call_id
         });
 
-        if (response.ok) {
-            const data = await response.json();
-            console.log('Call notification sent to Android app:', data);
-        } else {
-            console.error('Failed to send notification to Android app');
-        }
+        console.log('Call notification sent to Android app:', response.data);
     } catch (error) {
         console.error('Error sending notification to Android app:', error);
     }
