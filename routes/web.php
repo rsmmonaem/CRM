@@ -113,11 +113,13 @@ Route::middleware('auth')->group(function () {
     Route::get('reports/leads', [ReportController::class, 'leadReport'])->name('reports.leads')->middleware('permission:report_leads,view');
     Route::get('reports/call-logs', [ReportController::class, 'callLogReport'])->name('reports.call-logs')->middleware('permission:report_call_logs,view');
     Route::get('reports/user-summary', [ReportController::class, 'userSummaryReport'])->name('reports.user-summary')->middleware('permission:report_user_summary,view');
+    Route::get('reports/cr-dashboard', [ReportController::class, 'crDashboardReport'])->name('reports.cr-dashboard')->middleware('permission:report_cr_dashboard,view');
     
     // Print Routes
     Route::get('reports/print/leads', [ReportController::class, 'leadReportPrint'])->name('reports.leads.print')->middleware('permission:report_leads,view');
     Route::get('reports/print/call-logs', [ReportController::class, 'callLogReportPrint'])->name('reports.call-logs.print')->middleware('permission:report_call_logs,view');
     Route::get('reports/print/user-summary', [ReportController::class, 'userSummaryReportPrint'])->name('reports.user-summary.print')->middleware('permission:report_user_summary,view');
+    Route::get('reports/print/cr-dashboard', [ReportController::class, 'crDashboardReportPrint'])->name('reports.cr-dashboard.print')->middleware('permission:report_cr_dashboard,view');
 
     // Simple API route for lead details (no auth required for testing)
     Route::get('api/leads/{lead}/call-history', function($leadId) {
