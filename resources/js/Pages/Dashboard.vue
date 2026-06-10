@@ -23,7 +23,7 @@ const props = defineProps({
    
     selectedUser: Object,
 });
-const selectedUserId = ref(props.user?.id || '');
+const selectedUserId = ref(props.selectedUser?.id || '');
 
 if (props.selectedUser) {
     selectedUserId.value = props.selectedUser.id;
@@ -89,7 +89,11 @@ const closeLeadModal = () => {
 
 
 const filterByUser = (userId) => {
-    router.visit(route('dashboard.filter', userId));
+    if (!userId) {
+        router.visit(route('dashboard'));
+    } else {
+        router.visit(route('dashboard.filter', userId));
+    }
 };
 
 const clearFilter = () => {
@@ -247,7 +251,7 @@ const PaginationComponent = {
                             @change="filterByUser(selectedUserId)"
                             class="bg-white bg-opacity-20 hover:bg-opacity-30 text-white px-4 py-2 rounded-lg"
                         >
-                            <!-- <option value="">All Users</option> -->
+                            <option value="">All Users</option>
 
                             <option
                                 v-for="u in modalUsers"

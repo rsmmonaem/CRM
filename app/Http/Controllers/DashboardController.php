@@ -121,35 +121,45 @@ class DashboardController extends Controller
         $today = Carbon::today();
 
         // CRM Flow Summary Implementation for selected user
-        // 1. Today's Call: next_call_date = today and called_at IS NULL
-        $todaysCalls = LeadDetail::with(['lead.service', 'lead.status', 'lead.assignedUser'])
-            ->whereDate('next_call_date', $today)
-            ->whereNull('called_at')
-            ->whereHas('lead', function ($query) use ($userId) {
-                $query->where('assigned_user_id', $userId);
+        $todaysCallsQuery = Lead::with(['service', 'status', 'assignedUser', 'latestLeadDetail'])
+            ->whereHas('latestLeadDetail', function ($q) use ($today) {
+                $q->whereDate('next_call_date', $today);
             })
-            ->orderBy('next_call_date', 'asc')
-            ->get();
+            ->where('assigned_user_id', $userId);
 
-        // 2. Pending Call: next_call_date < today and called_at IS NULL
-        $pendingCalls = LeadDetail::with(['lead.service', 'lead.status', 'lead.assignedUser'])
-            ->whereDate('next_call_date', '<', $today)
-            ->whereNull('called_at')
-            ->whereHas('lead', function ($query) use ($userId) {
-                $query->where('assigned_user_id', $userId);
+        $pendingCallsQuery = Lead::with(['service', 'status', 'assignedUser', 'latestLeadDetail'])
+            ->whereHas('latestLeadDetail', function ($q) use ($today) {
+                $q->whereDate('next_call_date', '<', $today);
             })
-            ->orderBy('next_call_date', 'asc')
-            ->get();
+            ->where('assigned_user_id', $userId);
 
-        // 3. Upcoming Call: next_call_date > today and called_at IS NULL
-        $upcomingCalls = LeadDetail::with(['lead.service', 'lead.status', 'lead.assignedUser'])
-            ->whereDate('next_call_date', '>', $today)
-            ->whereNull('called_at')
-            ->whereHas('lead', function ($query) use ($userId) {
-                $query->where('assigned_user_id', $userId);
+        $upcomingCallsQuery = Lead::with(['service', 'status', 'assignedUser', 'latestLeadDetail'])
+            ->whereHas('latestLeadDetail', function ($q) use ($today) {
+                $q->whereDate('next_call_date', '>', $today);
             })
-            ->orderBy('next_call_date', 'asc')
-            ->get();
+            ->where('assigned_user_id', $userId);
+
+        $todaysCalls = $todaysCallsQuery->orderBy(
+            LeadDetail::select('next_call_date')
+                ->whereColumn('lead_id', 'leads.id')
+                ->latest()
+                ->take(1),
+            'desc'
+        )->get();
+
+        $pendingCalls = $pendingCallsQuery->orderBy(
+            LeadDetail::select('next_call_date')
+                ->whereColumn('lead_id', 'leads.id')
+                ->latest()
+                ->take(1)
+        )->get();
+
+        $upcomingCalls = $upcomingCallsQuery->orderBy(
+            LeadDetail::select('next_call_date')
+                ->whereColumn('lead_id', 'leads.id')
+                ->latest()
+                ->take(1)
+        )->get();
 
         // Get leads for selected user
         $leads = Lead::with(['service', 'status', 'assignedUser', 'leadDetails' => function ($query) {
