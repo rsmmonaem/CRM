@@ -1,10 +1,11 @@
 <script setup>
 import ModernLayout from '@/Layouts/ModernLayout.vue';
 import { Head, Link, router } from '@inertiajs/vue3';
-import { ref, computed } from 'vue';
+import { ref, computed,watch } from 'vue';
 import CallModal from '@/Components/CallModal.vue';
 import NewLeadModal from '@/Components/NewLeadModal.vue';
 import LeadShowModal from '@/Components/LeadShowModal.vue';
+
 
 const props = defineProps({
     todaysCalls: Array,
@@ -19,11 +20,27 @@ const props = defineProps({
     statuses: Array,
     call_statuses: Array,
     modalUsers: Array,
+   
+    selectedUser: Object,
 });
+const selectedUserId = ref(props.user?.id || '');
+
+if (props.selectedUser) {
+    selectedUserId.value = props.selectedUser.id;
+}
+watch(
+    () => props.selectedUser,
+    (newUser) => {
+        selectedUserId.value = newUser ? newUser.id : '';
+    }
+);
+
 
 const showCallModal = ref(false);
 const selectedLead = ref(null);
 const selectedCallDetail = ref(null);
+
+
 
 // New Lead Modal state
 const showNewLeadModal = ref(false);
@@ -224,6 +241,22 @@ const PaginationComponent = {
                         <p class="text-blue-100 text-lg">Manage your leads and track call activities efficiently</p>
                     </div>
                     <div class="flex items-center space-x-4">
+                    <!-- select user -->
+                        <select
+                            v-model="selectedUserId"
+                            @change="filterByUser(selectedUserId)"
+                            class="bg-white bg-opacity-20 hover:bg-opacity-30 text-white px-4 py-2 rounded-lg"
+                        >
+                            <!-- <option value="">All Users</option> -->
+
+                            <option
+                                v-for="u in modalUsers"
+                                :key="u.id"
+                                :value="u.id"
+                            >
+                                {{ u.name }}
+                            </option>
+                        </select>
                         <!-- New Lead Button -->
                         <button
                             @click="openNewLeadModal"

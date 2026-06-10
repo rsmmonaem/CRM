@@ -184,6 +184,274 @@ class ReportController extends Controller
             'filters' => $request->all(),
         ]);
     }
+    // TODO: Add CR Dashboard Report method here
+    public function crDashboardReport(Request $request)
+    {
+        
+        // This method will generate data for the CR Dashboard report
+        // Implementation will depend on the specific metrics and data needed for the dashboard
+        // For now, we can return an empty view or a placeholder message
+        $user = auth()->user();
+
+    $filterUserId = $request->input('assigned_user_id');
+    // dd($filterUserId);
+    $fromDate = $request->input('from_date');
+    $toDate = $request->input('to_date');
+
+    // same logic reuse from index
+    $leadQuery = Lead::query();
+    $leadDetailQuery = LeadDetail::query();
+
+    if ($filterUserId && $user->isAdmin()) {
+        $leadQuery->where('assigned_user_id', $filterUserId);
+        $leadDetailQuery->whereHas('lead', function ($q) use ($filterUserId) {
+            $q->where('assigned_user_id', $filterUserId);
+        });
+    } elseif (!$user->isAdmin()) {
+        $leadQuery->where('assigned_user_id', $user->id);
+        $leadDetailQuery->whereHas('lead', function ($q) use ($user) {
+            $q->where('assigned_user_id', $user->id);
+        });
+    }
+
+    $totalAssignLead = clone $leadQuery;
+    $intotalLeadDetail = clone $leadDetailQuery;
+
+    if ($fromDate && $toDate) {
+        $leadQuery->whereBetween('created_at', [$fromDate, Carbon::parse($toDate)->endOfDay()]);
+        $leadDetailQuery->whereBetween('created_at', [$fromDate, Carbon::parse($toDate)->endOfDay()]);
+    }
+
+    $today = Carbon::today();
+
+    $uniqueLeadsCalledCount = (clone $leadQuery)->whereHas('leadDetails')->count();
+
+    $totalAssignLeadCount = $totalAssignLead->count();
+    $todaytotalAssignLeadCount = (clone $leadQuery)->whereDate('created_at', $today)->count();
+
+    $todayTotalCallCount = $fromDate && $toDate
+        ? (clone $leadDetailQuery)->count()
+        : (clone $leadDetailQuery)->whereDate('created_at', $today)->count();
+
+    $intotalCallCount = $intotalLeadDetail->count();
+
+    $repeatCallCount = max(0, $intotalCallCount - $uniqueLeadsCalledCount);
+
+    $pendingFollowupCount = (clone $leadQuery)
+        ->whereHas('leadDetails', fn($q) => $q->whereDate('next_call_date', '<', $today))
+        ->count();
+
+    $intotalPendingCallCount = (clone $totalAssignLead)->doesntHave('leadDetails')->count();
+
+    $todayPendingCallCount = (clone $leadQuery)
+        ->whereDate('created_at', $today)
+        ->doesntHave('leadDetails')
+        ->count();
+
+    $todayFollowupCount = (clone $leadQuery)
+        ->whereHas('leadDetails', fn($q) => $q->whereDate('next_call_date', $today))
+        ->count();
+
+    $upcomingCallsCount = (clone $leadQuery)
+        ->whereHas('leadDetails', fn($q) => $q->whereDate('next_call_date', '>', $today))
+        ->count();
+
+    $todayVisitCount = (clone $leadQuery)->whereDate('updated_at', $today)->where('status_id', 11)->count();
+    $totalVisitCount = (clone $leadQuery)->where('status_id', 11)->count();
+
+    // 2. CRM Lead Call Result Summary (Based on `call_status` string in LeadDetail)
+    $callStatuses = Status::where('type', 'call')->get();
+    $callResultSummary = [];
+    $colorClasses = ['green', 'cyan', 'yellow', 'red', 'blue', 'orange', 'purple', 'darkgreen', 'gray', 'pink'];
+    
+    foreach ($callStatuses as $index => $status) {
+        $matches = (clone $leadDetailQuery)->where('call_status', $status->name)->count();
+        $callResultSummary[] = [
+            'name' => $status->name,
+            'count' => $matches,
+            'color' => $colorClasses[$index % count($colorClasses)]
+        ];
+    }
+
+    // 3. Reach Call Details (From Lead Status - `status_id` column in Leads table)
+    $leadStatuses = Status::where('type', 'lead')->get();
+    $leadResultSummary = [];
+    
+    foreach ($leadStatuses as $index => $status) {
+        $matches = (clone $leadQuery)->where('status_id', $status->id)->count();
+        $leadResultSummary[] = [
+            'name' => $status->name,
+            'count' => $matches,
+            'color' => $colorClasses[($index + 4) % count($colorClasses)]
+        ];
+    }
+
+    $users = User::select('id', 'name')->get();
+        // return Inertia::render('Reports/CRDashboardReport', [
+        //     'message' => 'CR Dashboard Report is under development.',
+        // ]);
+        // dd($data);
+            return Inertia::render('Reports/CRDashboardReport', [
+        'metrics' => [
+            'intotalAssignLead' => $totalAssignLeadCount,
+            'intotalPendingCall' => $intotalPendingCallCount,
+            'todaytotalAssignLead' => $todaytotalAssignLeadCount,
+            'todayPendingCall' => $todayPendingCallCount,
+            'todayTotalCall' => $todayTotalCallCount,
+            'intotalCall' => $intotalCallCount,
+            'repeatCall' => $repeatCallCount,
+            'todayFollowup' => $todayFollowupCount,
+            'pendingFollowup' => $pendingFollowupCount,
+            'upcomingCalls' => $upcomingCallsCount,
+            'todayVisit' => $todayVisitCount,
+            'totalVisit' => $totalVisitCount,
+        ],
+        'callResultSummary' => $callResultSummary,
+        'leadResultSummary' => $leadResultSummary,
+        'filters' => [
+            'assigned_user_id' => $filterUserId,
+            'from_date' => $fromDate,
+            'to_date' => $toDate,
+        ],
+        'users' => $users,
+        'user' => $user
+    ]);
+    }
+
+    public function crDashboardReportPrint(Request $request)
+    {
+        
+        // This method will generate data for the CR Dashboard report
+        // Implementation will depend on the specific metrics and data needed for the dashboard
+        // For now, we can return an empty view or a placeholder message
+        $user = auth()->user();
+
+    $filterUserId = $request->input('assigned_user_id');
+    // dd($filterUserId);
+    $fromDate = $request->input('from_date');
+    $toDate = $request->input('to_date');
+
+    // same logic reuse from index
+    $leadQuery = Lead::query();
+    $leadDetailQuery = LeadDetail::query();
+
+    if ($filterUserId && $user->isAdmin()) {
+        $leadQuery->where('assigned_user_id', $filterUserId);
+        $leadDetailQuery->whereHas('lead', function ($q) use ($filterUserId) {
+            $q->where('assigned_user_id', $filterUserId);
+        });
+    } elseif (!$user->isAdmin()) {
+        $leadQuery->where('assigned_user_id', $user->id);
+        $leadDetailQuery->whereHas('lead', function ($q) use ($user) {
+            $q->where('assigned_user_id', $user->id);
+        });
+    }
+
+    $totalAssignLead = clone $leadQuery;
+    $intotalLeadDetail = clone $leadDetailQuery;
+
+    if ($fromDate && $toDate) {
+        $leadQuery->whereBetween('created_at', [$fromDate, Carbon::parse($toDate)->endOfDay()]);
+        $leadDetailQuery->whereBetween('created_at', [$fromDate, Carbon::parse($toDate)->endOfDay()]);
+    }
+
+    $today = Carbon::today();
+
+    $uniqueLeadsCalledCount = (clone $leadQuery)->whereHas('leadDetails')->count();
+
+    $totalAssignLeadCount = $totalAssignLead->count();
+    $todaytotalAssignLeadCount = (clone $leadQuery)->whereDate('created_at', $today)->count();
+
+    $todayTotalCallCount = $fromDate && $toDate
+        ? (clone $leadDetailQuery)->count()
+        : (clone $leadDetailQuery)->whereDate('created_at', $today)->count();
+
+    $intotalCallCount = $intotalLeadDetail->count();
+
+    $repeatCallCount = max(0, $intotalCallCount - $uniqueLeadsCalledCount);
+
+    $pendingFollowupCount = (clone $leadQuery)
+        ->whereHas('leadDetails', fn($q) => $q->whereDate('next_call_date', '<', $today))
+        ->count();
+
+    $intotalPendingCallCount = (clone $totalAssignLead)->doesntHave('leadDetails')->count();
+
+    $todayPendingCallCount = (clone $leadQuery)
+        ->whereDate('created_at', $today)
+        ->doesntHave('leadDetails')
+        ->count();
+
+    $todayFollowupCount = (clone $leadQuery)
+        ->whereHas('leadDetails', fn($q) => $q->whereDate('next_call_date', $today))
+        ->count();
+
+    $upcomingCallsCount = (clone $leadQuery)
+        ->whereHas('leadDetails', fn($q) => $q->whereDate('next_call_date', '>', $today))
+        ->count();
+
+    $todayVisitCount = (clone $leadQuery)->whereDate('updated_at', $today)->where('status_id', 11)->count();
+    $totalVisitCount = (clone $leadQuery)->where('status_id', 11)->count();
+
+    // 2. CRM Lead Call Result Summary (Based on `call_status` string in LeadDetail)
+    $callStatuses = Status::where('type', 'call')->get();
+    $callResultSummary = [];
+    $colorClasses = ['green', 'cyan', 'yellow', 'red', 'blue', 'orange', 'purple', 'darkgreen', 'gray', 'pink'];
+    
+    foreach ($callStatuses as $index => $status) {
+        $matches = (clone $leadDetailQuery)->where('call_status', $status->name)->count();
+        $callResultSummary[] = [
+            'name' => $status->name,
+            'count' => $matches,
+            'color' => $colorClasses[$index % count($colorClasses)]
+        ];
+    }
+
+    // 3. Reach Call Details (From Lead Status - `status_id` column in Leads table)
+    $leadStatuses = Status::where('type', 'lead')->get();
+    $leadResultSummary = [];
+    
+    foreach ($leadStatuses as $index => $status) {
+        $matches = (clone $leadQuery)->where('status_id', $status->id)->count();
+        $leadResultSummary[] = [
+            'name' => $status->name,
+            'count' => $matches,
+            'color' => $colorClasses[($index + 4) % count($colorClasses)]
+        ];
+    }
+
+    $users = User::select('id', 'name')->get();
+        // return Inertia::render('Reports/Print/CRDashboardReportPrint', [
+        //     'message' => 'CR Dashboard Report is under development.',
+        // ]);
+        // dd($data);
+            return Inertia::render('Reports/Print/CRDashboardReportPrint', [
+        'metrics' => [
+            'intotalAssignLead' => $totalAssignLeadCount,
+            'intotalPendingCall' => $intotalPendingCallCount,
+            'todaytotalAssignLead' => $todaytotalAssignLeadCount,
+            'todayPendingCall' => $todayPendingCallCount,
+            'todayTotalCall' => $todayTotalCallCount,
+            'intotalCall' => $intotalCallCount,
+            'repeatCall' => $repeatCallCount,
+            'todayFollowup' => $todayFollowupCount,
+            'pendingFollowup' => $pendingFollowupCount,
+            'upcomingCalls' => $upcomingCallsCount,
+            'todayVisit' => $todayVisitCount,
+            'totalVisit' => $totalVisitCount,
+        ],
+        'callResultSummary' => $callResultSummary,
+        'leadResultSummary' => $leadResultSummary,
+        'filters' => [
+            'assigned_user_id' => $filterUserId,
+            'from_date' => $fromDate,
+            'to_date' => $toDate,
+        ],
+        'users' => $users,
+        'user' => $user,
+            'printTime' => now()->format('Y-m-d h:i A')
+    ]);
+    }
+
 
     /**
      * Printable Lead Reportit

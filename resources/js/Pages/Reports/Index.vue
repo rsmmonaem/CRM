@@ -175,6 +175,29 @@ const generateUserSummary = () => {
                     </svg>
                 </div>
             </button>
+            <!-- Cr dashboard report -->
+             <button 
+                v-if="user.is_admin || user.permissions?.['report_cr_dashboard']?.includes('view')"
+                @click="form.get(route('reports.cr-dashboard'))" 
+                class="group relative bg-white dark:bg-gray-800 p-8 rounded-2xl shadow-lg border border-gray-100 dark:border-gray-700 text-left hover:shadow-2xl hover:border-purple-500/50 transition-all duration-300 overflow-hidden active:scale-95"
+            >
+                <div class="absolute top-0 right-0 w-32 h-32 -mr-16 -mt-16 bg-purple-500/10 rounded-full blur-2xl group-hover:bg-purple-500/20 transition-all"></div>
+                <div class="mb-5 inline-flex p-4 bg-purple-100 dark:bg-purple-900/40 rounded-2xl text-purple-600 dark:text-purple-400 group-hover:bg-purple-600 group-hover:text-white transition-all duration-500">
+                    <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                </div>
+                <h3 class="text-2xl font-bold text-gray-800 dark:text-white mb-2 underline sm:no-underline underline-offset-4 decoration-purple-500/30">CR Dashboard</h3>
+                <p class="text-gray-500 dark:text-gray-400 text-sm">Comprehensive overview of customer relationship metrics and performance indicators.</p>
+                <div class="mt-6 flex items-center text-purple-600 dark:text-purple-400 font-bold group-hover:translate-x-2 transition-transform">
+                    <span>View Dashboard</span>
+                    <svg class="w-5 h-5 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                    </svg>
+                </div>
+            </button>
+
+
         </div>
     </ModernLayout>
 </template>
