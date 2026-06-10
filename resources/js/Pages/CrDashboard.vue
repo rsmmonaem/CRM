@@ -1,7 +1,7 @@
 <script setup>
 import ModernLayout from '@/Layouts/ModernLayout.vue';
 import { Head, router } from '@inertiajs/vue3';
-import { ref, watch } from 'vue';
+import { ref, watch, computed } from 'vue';
 
 const props = defineProps({
     metrics: Object,
@@ -30,6 +30,11 @@ const applyFilters = () => {
 
 watch([filterUserId, fromDate, toDate], () => {
     applyFilters();
+});
+
+// Intotal Assign Lead Done = Intotal Assign Lead - Intotal Assign Lead Pending
+const intotalAssignLeadDone = computed(() => {
+    return (props.metrics.intotalAssignLead || 0) - (props.metrics.intotalPendingCall || 0);
 });
 </script>
 
@@ -60,6 +65,7 @@ watch([filterUserId, fromDate, toDate], () => {
                     <div class="card blue">Today Assign Lead<div class="number">{{ metrics.todaytotalAssignLead }}</div></div>
                     <div class="card cyan">Intotal Assain Lead Pending<div class="number">{{ metrics.intotalPendingCall }}</div></div>
                     <div class="card yellow">Today Assain Lead Pending<div class="number">{{ metrics.todayPendingCall }}</div></div>
+                    <div class="card pink">Intotal Assign Lead Done<div class="number">{{ intotalAssignLeadDone }}</div></div>
                     <div class="card orange">Today Total Call<div class="number">{{ metrics.todayTotalCall }}</div></div>
                     <div class="card green">Intotal Call<div class="number">{{ metrics.intotalCall }}</div></div>
                     <div class="card purple">Repeat Call<div class="number">{{ metrics.repeatCall }}</div></div>
